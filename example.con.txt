@@ -1,0 +1,47 @@
+# This file demonstrates the format of age constraints used by the script snapp_prep.rb:
+# 
+# - All lines beginning with # are ignored by snapp_prep.rb, as are empty lines.
+# - Lines beginning with "normal", "lognormal", "uniform", or "cladeage" are assumed to
+#   specify age constraints.
+# - The format for these age constraints consists of three character strings separated
+#   by white space (tabs or spaces).
+# - The first of these three character strings specifies the prior distribution, where
+#   the type of the distribution ("normal", "lognormal", "uniform", or "cladeage") is
+#   followed by the parameters of the distribution, given in parentheses and separated
+#   by commas.
+#      For a normal distribution, these parameters are (in this order)
+#        (1.)   offset
+#        (2.)   mean
+#        (3.)   standard deviation
+#      For a lognormal distribution, these parameters are
+#        (1.)   offset
+#        (2.)   mean in real space
+#        (3.)   standard deviation (of log-transformed distribution)
+#      For a uniform distribution, these parameters are
+#        (1.)   lower boundary
+#        (2.)   upper boundary
+#      For a cladeage distribution, these parameters are
+#        (1.)   minimum estimate of fossil age
+#        (2.)   maximum estimate of fossil age
+#        (3.)   minimum estimate of net diversification
+#        (4.)   maximum estimate of net diversification
+#        (5.)   minimum estimate of turnover
+#        (6.)   maximum estimate of turnover
+#        (7.)   minimum estimate of sampling rate
+#        (8.)   maximum estimate of sampling rate
+#        See Matschiner et al. (2016; http://bit.ly/2dE8Y6l) for more information on
+#        cladeage constraints.
+# - The second of the three character strings should be either "crown" or "stem" and
+#   specifies whether the age constraint should apply to the crown or stem age of the
+#   clade. Note that cladeage constraints always apply to the stem age of a clade.
+# - The third of the three character strings should be a comma-separated list of all
+#   sampled species included the constrained clade.
+#
+# Examples:
+# - normal(10,5,1)	crown	speciesA,speciesB,speciesC
+# - lognormal(10,5,1)	stem	speciesA,speciesB,speciesC
+# - uniform(10,15)	crown	speciesA,speciesB,speciesC
+# - cladeage(10,11,0.01,0.02,0.2,0.5,0.001,0.01)	stem	speciesA,speciesB,speciesC
+
+lognormal(0,7.66172,0.1)	stem	s17,s0
+cladeage(10,11,0.01,0.02,0.2,0.5,0.001,0.01)	stem	s17,s0,s10
