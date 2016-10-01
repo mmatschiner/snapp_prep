@@ -4,7 +4,7 @@ The Ruby script `snapp_prep.rb` prepares XML format input files for the software
 
 A manuscript on divergence-time estimation with SNAPP is in preparation.
 
-To learn about the available options of this script, run with '-h' (or without any options):
+To learn about the available options of this script, run with `-h` (or without any options):
 
 ```
 ruby snapp_prep.rb -h
