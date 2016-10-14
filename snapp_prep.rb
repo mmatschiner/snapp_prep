@@ -280,7 +280,11 @@ snapp_string << "\n"
 snapp_string << "<!-- Data -->\n"
 unless options[:no_annotation]
 	snapp_string << "<!--\n"
-	snapp_string << "The SNP data matrix, converted to binary format from file #{options[:phylip]}.\n"
+	if sequence_format_is_binary
+		snapp_string << "The SNP data matrix, taken from file #{options[:phylip]}.\n"
+	else
+		snapp_string << "The SNP data matrix, converted to binary format from file #{options[:phylip]}.\n"
+	end
 	if number_of_excluded_sites == 1
 		snapp_string << "1 site was found to be non-biallelic and has been exluded.\n"
 	elsif number_of_excluded_sites > 1
