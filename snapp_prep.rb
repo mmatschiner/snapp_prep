@@ -67,86 +67,150 @@ phylip_lines[1..-1].each do |l|
 	seqs << l.split[1].upcase
 end
 
-# Translate the sequences into SNAPP's "0", "1", "2" code, where "1" is heterozygous.
-binary_seqs = []
-warn_string = ""
-number_of_excluded_sites = 0
-seqs.size.times{binary_seqs << ""}
-seqs[0].size.times do |pos|
-	# Collect all bases at this position.
-	bases_at_this_pos = []
-	seqs.each do |s|
-		if s[pos] == "A"
-			bases_at_this_pos << "A"
-			bases_at_this_pos << "A"
-		elsif s[pos] == "C"
-			bases_at_this_pos << "C"
-			bases_at_this_pos << "C"
-		elsif s[pos] == "G"
-			bases_at_this_pos << "G"
-			bases_at_this_pos << "G"
-		elsif s[pos] == "T"
-			bases_at_this_pos << "T"
-			bases_at_this_pos << "T"
-		elsif s[pos] == "R"
-			bases_at_this_pos << "A"
-			bases_at_this_pos << "G"
-		elsif s[pos] == "Y"
-			bases_at_this_pos << "C"
-			bases_at_this_pos << "T"
-		elsif s[pos] == "S"
-			bases_at_this_pos << "G"
-			bases_at_this_pos << "C"
-		elsif s[pos] == "W"
-			bases_at_this_pos << "A"
-			bases_at_this_pos << "T"
-		elsif s[pos] == "K"
-			bases_at_this_pos << "G"
-			bases_at_this_pos << "T"
-		elsif s[pos] == "M"
-			bases_at_this_pos << "A"
-			bases_at_this_pos << "C"
-		else
-			unless ["N","?","-"].include?(s[pos])
-				puts "ERROR: Found unexpected base at position #{pos+1}: #{s[pos]}!"
-				exit(1)
-			end
+# Recognize the sequence format (nucleotides or binary).
+unique_seq_chars = []
+binary_chars = ["0","1","2"]
+nucleotide_chars = ["A","C","G","T","R","Y","S","W","K","M"]
+missing_chars = ["-","?","N"]
+seqs.each do |s|
+	s.size.times do |pos|
+		unless missing_chars.include?(s[pos])
+			unique_seq_chars << s[pos] unless unique_seq_chars.include?(s[pos])
 		end
-	end
-	uniq_bases_at_this_pos = bases_at_this_pos.uniq
-	# Issue a warning if non-biallelic sites are excluded.
-	if uniq_bases_at_this_pos.size == 2
-	# Randomly define what's "0" and "2".
-	uniq_bases_at_this_pos.shuffle!
-		seqs.size.times do |x|
-			if seqs[x][pos] == uniq_bases_at_this_pos[0]
-				binary_seqs[x] << "0"
-			elsif seqs[x][pos] == uniq_bases_at_this_pos[1]
-				binary_seqs[x] << "2"
-			else
-				binary_seqs[x] << "1"
-			end
-		end
-	elsif uniq_bases_at_this_pos.size == 0
-		warn_string << "WARNING: Site with only missing data excluded at position #{pos+1}!\n"
-		number_of_excluded_sites += 1
-	elsif uniq_bases_at_this_pos.size == 1
-		warn_string << "WARNING: Monomorphic site (allele #{uniq_bases_at_this_pos[0]}) excluded at position #{pos+1}!\n"
-		number_of_excluded_sites += 1
-	elsif uniq_bases_at_this_pos.size == 3
-		warn_string << "WARNING: Site with three alleles (alleles #{uniq_bases_at_this_pos[0]}, #{uniq_bases_at_this_pos[1]}, #{uniq_bases_at_this_pos[2]}) excluded at position #{pos+1}!\n"
-		number_of_excluded_sites += 1
-	elsif uniq_bases_at_this_pos.size == 4
-		warn_string << "WARNING: Site with four alleles (alleles #{uniq_bases_at_this_pos[0]}, #{uniq_bases_at_this_pos[1]}, #{uniq_bases_at_this_pos[2]}, #{uniq_bases_at_this_pos[3]}) excluded at position #{pos+1}!\n"
-		number_of_excluded_sites += 1
-	else
-		puts "ERROR: Found unexpected number of alleles at position #{pos+1}!"
-		exit(1)
 	end
 end
-unless warn_string == ""
-	warn_string << "\n"
-	warn warn_string
+sequence_format_is_nucleotide = true
+sequence_format_is_binary = true
+unique_seq_chars.each do |c|
+	sequence_format_is_binary = false unless binary_chars.include?(c)
+	sequence_format_is_nucleotide = false unless nucleotide_chars.include?(c)
+end
+if sequence_format_is_binary == false and sequence_format_is_nucleotide == false
+	puts "ERROR: Sequence format could not be recognized as either 'nucleotide' or 'binary'!"
+	exit(1)
+end
+
+# If necessary, translate the sequences into SNAPP's "0", "1", "2" code, where "1" is heterozygous.
+binary_seqs = []
+seqs.size.times{binary_seqs << ""}
+warn_string = ""
+number_of_excluded_sites = 0
+if sequence_format_is_binary
+	seqs[0].size.times do |pos|
+		alleles_at_this_pos = []
+		seqs.each do |s|
+			alleles_at_this_pos << s[pos] if binary_chars.include?(s[pos])
+		end
+		uniq_alleles_at_this_pos = alleles_at_this_pos.uniq
+		if uniq_alleles_at_this_pos.size == 2 or uniq_alleles_at_this_pos.size == 3
+			seqs.size.times do |x|
+				binary_seqs[x] << seqs[x][pos]
+			end
+		elsif uniq_alleles_at_this_pos.size == 0
+			warn_string << "WARNING: Site with only missing data excluded at position #{pos+1}!\n"
+			number_of_excluded_sites += 1
+		elsif uniq_alleles_at_this_pos.size == 1
+			warn_string << "WARNING: Monomorphic site (allele #{uniq_alleles_at_this_pos[0]}) excluded at position #{pos+1}!\n"
+			number_of_excluded_sites += 1
+		end
+	end
+	unless warn_string == ""
+		warn_string << "\n"
+		puts warn_string
+	end
+
+	# Check if the total number of '0' and '2' in the data set are similar.
+	total_number_of_0s = 0
+	total_number_of_2s = 0
+	binary_seqs.each do |b|
+		total_number_of_0s += b.count("0")
+		total_number_of_2s += b.count("2")
+	end
+	goal = 0.5
+	tolerance = 0.01
+	if (total_number_of_0s/(total_number_of_0s+total_number_of_2s).to_f - goal).abs > tolerance
+		warn_string << "WARNING: The number of '0' and '2' in the data set is expected to be similar, however,\n"
+		warn_string << "    they differ by more than #{tolerance*100.round} percent!\n"
+		warn_string << "\n"
+		puts warn_string
+	end
+else
+	seqs[0].size.times do |pos|
+		# Collect all bases at this position.
+		bases_at_this_pos = []
+		seqs.each do |s|
+			if s[pos] == "A"
+				bases_at_this_pos << "A"
+				bases_at_this_pos << "A"
+			elsif s[pos] == "C"
+				bases_at_this_pos << "C"
+				bases_at_this_pos << "C"
+			elsif s[pos] == "G"
+				bases_at_this_pos << "G"
+				bases_at_this_pos << "G"
+			elsif s[pos] == "T"
+				bases_at_this_pos << "T"
+				bases_at_this_pos << "T"
+			elsif s[pos] == "R"
+				bases_at_this_pos << "A"
+				bases_at_this_pos << "G"
+			elsif s[pos] == "Y"
+				bases_at_this_pos << "C"
+				bases_at_this_pos << "T"
+			elsif s[pos] == "S"
+				bases_at_this_pos << "G"
+				bases_at_this_pos << "C"
+			elsif s[pos] == "W"
+				bases_at_this_pos << "A"
+				bases_at_this_pos << "T"
+			elsif s[pos] == "K"
+				bases_at_this_pos << "G"
+				bases_at_this_pos << "T"
+			elsif s[pos] == "M"
+				bases_at_this_pos << "A"
+				bases_at_this_pos << "C"
+			else
+				unless ["N","?","-"].include?(s[pos])
+					puts "ERROR: Found unexpected base at position #{pos+1}: #{s[pos]}!"
+					exit(1)
+				end
+			end
+		end
+		uniq_bases_at_this_pos = bases_at_this_pos.uniq
+		# Issue a warning if non-biallelic sites are excluded.
+		if uniq_bases_at_this_pos.size == 2
+		# Randomly define what's "0" and "2".
+		uniq_bases_at_this_pos.shuffle!
+			seqs.size.times do |x|
+				if seqs[x][pos] == uniq_bases_at_this_pos[0]
+					binary_seqs[x] << "0"
+				elsif seqs[x][pos] == uniq_bases_at_this_pos[1]
+					binary_seqs[x] << "2"
+				else
+					binary_seqs[x] << "1"
+				end
+			end
+		elsif uniq_bases_at_this_pos.size == 0
+			warn_string << "WARNING: Site with only missing data excluded at position #{pos+1}!\n"
+			number_of_excluded_sites += 1
+		elsif uniq_bases_at_this_pos.size == 1
+			warn_string << "WARNING: Monomorphic site (allele #{uniq_bases_at_this_pos[0]}) excluded at position #{pos+1}!\n"
+			number_of_excluded_sites += 1
+		elsif uniq_bases_at_this_pos.size == 3
+			warn_string << "WARNING: Site with three alleles (alleles #{uniq_bases_at_this_pos[0]}, #{uniq_bases_at_this_pos[1]}, #{uniq_bases_at_this_pos[2]}) excluded at position #{pos+1}!\n"
+			number_of_excluded_sites += 1
+		elsif uniq_bases_at_this_pos.size == 4
+			warn_string << "WARNING: Site with four alleles (alleles #{uniq_bases_at_this_pos[0]}, #{uniq_bases_at_this_pos[1]}, #{uniq_bases_at_this_pos[2]}, #{uniq_bases_at_this_pos[3]}) excluded at position #{pos+1}!\n"
+			number_of_excluded_sites += 1
+		else
+			puts "ERROR: Found unexpected number of alleles at position #{pos+1}!"
+			exit(1)
+		end
+	end
+	unless warn_string == ""
+		warn_string << "\n"
+		puts warn_string
+	end
 end
 
 # Read the file with a table linking species and specimens.
@@ -177,7 +241,7 @@ constraint_lines.each do |l|
 	end
 end
 if constraint_strings.size == 0
-	warn "WARNING: No age constraints could be found in file #{options[:constraints]}! You will have to manually modify the XML file to include age constraints."
+	puts "WARNING: No age constraints could be found in file #{options[:constraints]}! You will have to manually modify the XML file to include age constraints."
 end
 if cladeage_constraints_used
 	info_string = "INFO: CladeAge constraints are specified in file #{options[:constraints]}.\n"
@@ -199,7 +263,7 @@ else
 	warn_string << "    such a problem is encountered, it can be solved by providing a starting tree in which\n"
 	warn_string << "    the ages of constrained clades agree with the constraints placed on these clades.\n"
 	warn_string << "\n"
-	warn warn_string
+	puts warn_string
 end
 
 # Set run parameters.
