@@ -470,7 +470,7 @@ unless options[:no_annotation]
 	snapp_string << "            -->\n"
 end
 snapp_string << "            <prior name=\"distribution\" x=\"@lambda\">\n"
-snapp_string << "                <Uniform name=\"distr\" lower=\"0.0\" upper=\"1000\"/>\n"
+snapp_string << "                <OneOnX name=\"distr\"/>\n"
 snapp_string << "            </prior>\n"
 unless options[:no_annotation]
 	snapp_string << "            <!--\n"
