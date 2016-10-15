@@ -235,7 +235,7 @@ constraint_lines = constraint_file.readlines
 constraint_strings = []
 cladeage_constraints_used = false
 constraint_lines.each do |l|
-	if ["normal","lognor","unifor","cladea"].include?(l[0..5].downcase)
+	if ["normal","lognor","unifor","cladea","monoph"].include?(l[0..5].downcase)
 		cladeage_constraints_used = true if l[0..7].downcase == "cladeage"
 		constraint_strings << l
 	end
@@ -257,10 +257,10 @@ if options[:tree]
 	tree_string = tree_file.readlines[0].strip.chomp(";").gsub(/\[.+?\]/,"")
 else
 	warn_string = "WARNING: As no starting tree has been specified, a random starting tree will be used by\n"
-	warn_string << "    SNAPP. If the random starting tree is in conflict with specified age constraints,\n"
-	warn_string << "    SNAPP may not be able to find a suitable state to initiate the MCMC chain. This will\n"
-	warn_string << "    lead to an error message such as 'Could not find a proper state to initialise'. If\n"
-	warn_string << "    such a problem is encountered, it can be solved by providing a starting tree in which\n"
+	warn_string << "    SNAPP. If the random starting tree is in conflict with specified constraints, SNAPP\n"
+	warn_string << "    may not be able to find a suitable state to initiate the MCMC chain. This will lead\n"
+	warn_string << "    to an error message such as 'Could not find a proper state to initialise'. If such\n"
+	warn_string << "    a problem is encountered, it can be solved by providing a starting tree in which\n"
 	warn_string << "    the ages of constrained clades agree with the constraints placed on these clades.\n"
 	warn_string << "\n"
 	puts warn_string
@@ -355,20 +355,29 @@ constraint_strings.each do |c|
 			exit(1)
 		end
 	end
-	unless ["stem","crown"].include?(constraint_placement)
-		puts "ERROR: Expected 'stem' or 'crown' but found '#{constraint_placement}' as the second character string in '#{c}'!"
+	unless ["stem","crown","na"].include?(constraint_placement)
+		puts "ERROR: Expected 'stem', 'crown', or 'NA' (only for monophyly constraints without calibration)"
+		puts "    but found '#{constraint_placement}' as the second character string in '#{c}'!"
 		exit(1)
 	end
-	unless constraint_distribution.include?("(")
-		puts "ERROR: Expected parameters in parentheses as part of the first character string in '#{c}', but found '#{constraint_distribution}'!"
+	if constraint_distribution.include?("(") == false and constraint_distribution != "monophyletic"
+		puts "ERROR: Expected parameters in parentheses as part of the first character string in '#{c}'"
+		puts "    (except for monophyly constraints without calibration), but found '#{constraint_distribution}'!"
 		exit(1)
 	end
-	constraint_type = constraint_distribution.split("(")[0].strip
-	unless ["normal","lognormal","uniform","cladeage"].include?(constraint_type)
-		puts "ERROR: Expected 'normal', 'lognormal', 'uniform', or 'cladeage' as part of the first character string in '#{c}' but found '#{constraint_type}'!"
+	if constraint_distribution == "monophyletic"
+		constraint_type = "monophyletic"
+	else
+		constraint_type = constraint_distribution.split("(")[0].strip
+	end
+	unless ["normal","lognormal","uniform","cladeage","monophyletic"].include?(constraint_type)
+		puts "ERROR: Expected 'normal', 'lognormal', 'uniform', 'cladeage', or 'monophyletic' as part"
+		puts "    of the first character string in '#{c}' but found '#{constraint_type}'!"
 		exit(1)
 	end
-	constraint_parameters = constraint_distribution.split("(")[1].strip.chomp(")").split(",")
+	unless constraint_type == "monophyletic"
+		constraint_parameters = constraint_distribution.split("(")[1].strip.chomp(")").split(",")
+	end
 	if constraint_type == "normal"
 		unless constraint_parameters.size == 3
 			puts "ERROR: Expected 3 parameters for normal distribution, but found #{constraint_parameters.size}!"
@@ -390,8 +399,10 @@ constraint_strings.each do |c|
 			exit(1)
 		end
 	else
-		puts "ERROR: Unexpected constraint type '#{constraint_type}'!"
-		exit(1)
+		unless constraint_type == "monophyletic"
+			puts "ERROR: Unexpected constraint type '#{constraint_type}'!"
+			exit(1)
+		end
 	end
 	constraint_id = constraint_count.to_s.rjust(4).gsub(" ","0")
 	if constraint_type == "cladeage"

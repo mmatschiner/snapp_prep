@@ -2,7 +2,10 @@
 # 
 # - All lines beginning with # are ignored by snapp_prep.rb, as are empty lines.
 # - Lines beginning with "normal", "lognormal", "uniform", or "cladeage" are assumed to
-#   specify age constraints.
+#   specify age constraints. The clades used for these constraints are always also
+#   constrained to be monophyletic. Clades can also be constrained to be monophyletic
+#   without additional age constraints. These monophyly constraints can be specified with
+#   lines starting with "monophyletic".
 # - The format for these age constraints consists of three character strings separated
 #   by white space (tabs or spaces).
 # - The first of these three character strings specifies the prior distribution, where
@@ -29,11 +32,15 @@
 #        (6.)   maximum estimate of turnover
 #        (7.)   minimum estimate of sampling rate
 #        (8.)   maximum estimate of sampling rate
-#        See Matschiner et al. (2016; http://bit.ly/2dE8Y6l) for more information on
+#        See Matschiner et al. (2016; http://bit.ly/2e9BCsc) for more information on
 #        cladeage constraints.
-# - The second of the three character strings should be either "crown" or "stem" and
-#   specifies whether the age constraint should apply to the crown or stem age of the
-#   clade. Note that cladeage constraints always apply to the stem age of a clade.
+#   The exception to this are pure monophyly constraints, in which case the first of the
+#   three character strings is simply "monophyletic".
+# - The second of the three character strings should be either "crown", "stem" or "NA"
+#   and specifies whether the age constraint should apply to the crown or stem age of the
+#   clade. Note that cladeage constraints always apply to the stem age of a clade. For
+#   pure monophyly constraints, only "NA" (not applicable) should be specified as the
+#   second character string.
 # - The third of the three character strings should be a comma-separated list of all
 #   sampled species included the constrained clade.
 #
@@ -42,6 +49,8 @@
 # - lognormal(10,5,1)	stem	speciesA,speciesB,speciesC
 # - uniform(10,15)	crown	speciesA,speciesB,speciesC
 # - cladeage(10,11,0.01,0.02,0.2,0.5,0.001,0.01)	stem	speciesA,speciesB,speciesC
+# - monophyletic	NA	speciesA,speciesB,speciesC
 
 lognormal(0,7.66172,0.1)	stem	s17,s0
 cladeage(10,11,0.01,0.02,0.2,0.5,0.001,0.01)	stem	s17,s0,s10
+monophyletic	NA	s1,s6,s11,s12,s3
