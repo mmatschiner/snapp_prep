@@ -361,8 +361,9 @@ constraint_strings.each do |c|
 		exit(1)
 	end
 	if constraint_distribution.include?("(") == false and constraint_distribution != "monophyletic"
-		puts "ERROR: Expected parameters in parentheses as part of the first character string in '#{c}'"
-		puts "    (except for monophyly constraints without calibration), but found '#{constraint_distribution}'!"
+		puts "ERROR: Expected parameters in parentheses as part of the first character string in "
+		puts "    '#{c.strip}',"
+		puts "    but found '#{constraint_distribution}'!"
 		exit(1)
 	end
 	if constraint_distribution == "monophyletic"
