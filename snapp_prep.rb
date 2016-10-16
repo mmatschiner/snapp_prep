@@ -27,8 +27,9 @@ options[:phylip] = "example.phy"
 options[:table] = "example.spc.txt"
 options[:constraints] = "example.con.txt"
 options[:tree] = nil
-options[:xml] = "snapp.xml"
 options[:length] = 500000
+options[:weight] = 1.0
+options[:xml] = "snapp.xml"
 options[:out] = "snapp"
 options[:no_annotation] = false
 
@@ -45,8 +46,9 @@ opt_parser = OptionParser.new do |opt|
 	opt.on("-t","--table FILENAME","File with table linking species and specimens (default: #{options[:table]}).") {|t| options[:table] = t}
 	opt.on("-c","--constraints FILENAME","File with age constraint information (default: #{options[:constraints]}).") {|c| options[:constraints] = c}
 	opt.on("-s","--starting-tree FILENAME","File with starting tree in Nexus or Newick format (default: none).") {|s| options[:tree] = s}
-	opt.on("-x","--xml FILENAME","Output file in XML format (default: #{options[:xml]}).") {|x| options[:xml] = x}
 	opt.on("-l","--length LENGTH",Integer,"Number of MCMC generations (default: #{options[:length]}).") {|l| options[:length] = l}
+	opt.on("-w","--weight WEIGHT",Float,"Relative weight of topology operator (default: #{options[:weight]}).") {|w| options[:weight] = w}
+	opt.on("-x","--xml FILENAME","Output file in XML format (default: #{options[:xml]}).") {|x| options[:xml] = x}
 	opt.on("-o","--out PREFIX","Prefix for SNAPP's .log and .trees output files (default: snapp).") {|i| options[:out] = i}
 	opt.on("-n","--no-annotation","Do not add explanatory annotation to XML file (default: #{options[:no_annotation]}).") {options[:no_annotation] = true}
 	opt.on("-h","--help","Print this help text.") {
@@ -110,7 +112,7 @@ if sequence_format_is_binary
 			warn_string << "WARNING: Site with only missing data excluded at position #{pos+1}!\n"
 			number_of_excluded_sites += 1
 		elsif uniq_alleles_at_this_pos.size == 1
-			warn_string << "WARNING: Monomorphic site (allele #{uniq_alleles_at_this_pos[0]}) excluded at position #{pos+1}!\n"
+			warn_string << "WARNING: Monomorphic site (allele: '#{uniq_alleles_at_this_pos[0]}') excluded at position #{pos+1}!\n"
 			number_of_excluded_sites += 1
 		end
 	end
@@ -194,13 +196,13 @@ else
 			warn_string << "WARNING: Site with only missing data excluded at position #{pos+1}!\n"
 			number_of_excluded_sites += 1
 		elsif uniq_bases_at_this_pos.size == 1
-			warn_string << "WARNING: Monomorphic site (allele #{uniq_bases_at_this_pos[0]}) excluded at position #{pos+1}!\n"
+			warn_string << "WARNING: Monomorphic site (allele: '#{uniq_bases_at_this_pos[0]}') excluded at position #{pos+1}!\n"
 			number_of_excluded_sites += 1
 		elsif uniq_bases_at_this_pos.size == 3
-			warn_string << "WARNING: Site with three alleles (alleles #{uniq_bases_at_this_pos[0]}, #{uniq_bases_at_this_pos[1]}, #{uniq_bases_at_this_pos[2]}) excluded at position #{pos+1}!\n"
+			warn_string << "WARNING: Site with three alleles (alleles: '#{uniq_bases_at_this_pos[0]}', '#{uniq_bases_at_this_pos[1]}', '#{uniq_bases_at_this_pos[2]}') excluded at position #{pos+1}!\n"
 			number_of_excluded_sites += 1
 		elsif uniq_bases_at_this_pos.size == 4
-			warn_string << "WARNING: Site with four alleles (alleles #{uniq_bases_at_this_pos[0]}, #{uniq_bases_at_this_pos[1]}, #{uniq_bases_at_this_pos[2]}, #{uniq_bases_at_this_pos[3]}) excluded at position #{pos+1}!\n"
+			warn_string << "WARNING: Site with four alleles (alleles: '#{uniq_bases_at_this_pos[0]}', '#{uniq_bases_at_this_pos[1]}', '#{uniq_bases_at_this_pos[2]}', '#{uniq_bases_at_this_pos[3]}') excluded at position #{pos+1}!\n"
 			number_of_excluded_sites += 1
 		else
 			puts "ERROR: Found unexpected number of alleles at position #{pos+1}!"
@@ -553,13 +555,15 @@ snapp_string << "        </distribution>\n"
 snapp_string << "    </distribution>\n"
 snapp_string << "\n"
 snapp_string << "    <!-- Operators -->\n"
-unless options[:no_annotation]
-	snapp_string << "    <!--\n"
-	snapp_string << "    The treeNodeSwapper operator is the only operator on the tree topology. Thus if the tree topology\n"
-	snapp_string << "    should be fixed, simply remove this operator by deleting the second-next line.\n"
-	snapp_string << "    -->\n"
+if options[:weight] > 0
+	unless options[:no_annotation]
+		snapp_string << "    <!--\n"
+		snapp_string << "    The treeNodeSwapper operator is the only operator on the tree topology. Thus if the tree topology\n"
+		snapp_string << "    should be fixed, simply remove this operator by deleting the second-next line.\n"
+		snapp_string << "    -->\n"
+	end
+	snapp_string << "    <operator id=\"treeNodeSwapper\" spec=\"snap.operators.NodeSwapper\" tree=\"@tree\" weight=\"#{options[:weight]}\"/>\n"
 end
-snapp_string << "    <operator id=\"treeNodeSwapper\" spec=\"snap.operators.NodeSwapper\" tree=\"@tree\" weight=\"1.0\"/>\n"
 unless options[:no_annotation]
 	snapp_string << "    <!--\n"
 	snapp_string << "    The treeNodeBudger and treeScaler operators modify node heights of the tree.\n"
