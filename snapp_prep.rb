@@ -524,7 +524,7 @@ snapp_string << "                <parameter estimate=\"false\" lower=\"0.0\" nam
 snapp_string << "            </distribution>\n"
 snapp_string << "        </distribution>\n"
 snapp_string << "        <distribution id=\"likelihood\" spec=\"util.CompoundDistribution\">\n"
-snapp_string << "            <distribution spec=\"snap.likelihood.SnAPTreeLikelihood\" data=\"@data\" pattern=\"coalescenceRate\" tree=\"@tree\">\n"
+snapp_string << "            <distribution spec=\"snap.likelihood.SnAPTreeLikelihood\" data=\"@data\" non-polymorphic=\"false\" pattern=\"coalescenceRate\" tree=\"@tree\">\n"
 snapp_string << "                <siteModel spec=\"SiteModel\">\n"
 snapp_string << "                    <substModel spec=\"snap.likelihood.SnapSubstitutionModel\" coalescenceRate=\"@coalescenceRate\">\n"
 unless options[:no_annotation]
