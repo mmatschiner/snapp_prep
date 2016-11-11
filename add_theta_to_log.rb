@@ -24,6 +24,7 @@ require 'optparse'
 options = {}
 options[:log] = "snapp.log"
 options[:trees] = "snapp.trees"
+options[:generation_time] = 1.0
 options[:out] = options[:log].chomp(".log") + "_w_theta.log"
 
 # Get the command line options.
@@ -32,12 +33,13 @@ opt_parser = OptionParser.new do |opt|
 	opt.banner = "Usage: ruby #{$0} [OPTIONS]"
 	opt.separator  ""
 	opt.separator  "Example"
-	opt.separator  "ruby #{$0} -l #{options[:log]} -t #{options[:trees]} -o #{options[:out]}"
+	opt.separator  "ruby #{$0} -l #{options[:log]} -t #{options[:trees]} -g #{options[:generation_time]} -o #{options[:out]}"
 	opt.separator  ""
 	opt.separator  "Options"
 	opt.on("-l","--log FILENAME","Name of .log output file of SNAPP analysis (default: #{options[:log]}).") {|l| options[:log] = l}
 	opt.on("-t","--trees FILENAME","Name of .trees output file of SNAPP analysis (default: #{options[:trees]}).") {|t| options[:trees] = t}
-	opt.on("-o","--out PREFIX","Name of  new .log output file (default: #{options[:out]}).") {|o| options[:out] = o}
+	opt.on("-g","--gentime NUMBER",Float,"Generation time (required to calculate population size) (default: #{options[:generation_time]}).") {|g| options[:generation_time] = g}
+	opt.on("-o","--out FILENAME","Name of  new .log output file (default: #{options[:out]}).") {|o| options[:out] = o}
 	opt.on("-h","--help","Print this help text.") {
 		puts opt_parser
 		exit(0)
@@ -52,8 +54,10 @@ log_lines = log_file.readlines
 log_header_line = log_lines[0]
 log_state_lines = log_lines[1..-1]
 log_state_numbers = []
+log_clock_rates = []
 log_state_lines.each do |l|
 	log_state_numbers << l.split[0]
+	log_clock_rates << l.split[-1].to_f
 end
 
 # Read the .trees input file.
@@ -66,11 +70,11 @@ trees_lines.each do |l|
 		l.match(/STATE_(\d+)\s*=/)
 		tree_state = $1
 		if l.include?("theta")
-			l.match(/theta=([0-9.]+)/)
+			l.match(/theta=([0-9\.\-eE]+)/)
 		elsif l.include?("null")
-			l.match(/null=([0-9.]+)/)
+			l.match(/null=([0-9\.\-eE]+)/)
 		end
-		theta = $1
+		theta = $1.to_f
 		if tree_state != nil and theta != nil
 			tree_states << tree_state
 			thetas << theta
@@ -79,12 +83,15 @@ trees_lines.each do |l|
 end
 
 # Add theta estimates to .log lines.
-out_string = "#{log_header_line.strip}\ttheta\t\n"
+out_string = "#{log_header_line.strip}\ttheta\tpopulation_size\t\n"
 log_state_numbers.size.times do |x|
 	if tree_states.include?(log_state_numbers[x])
-		out_string << "#{log_state_lines[x].strip}\t#{thetas[tree_states.index(log_state_numbers[x])]}\t\n"
+		theta = thetas[tree_states.index(log_state_numbers[x])]
+		mutation_rate = log_clock_rates[x]/(1000000.0/options[:generation_time])		
+		pop_size = theta/(4.0*mutation_rate)
+		out_string << "#{log_state_lines[x].strip}\t#{theta}\t#{pop_size}\t\n"
 	else
-		out_string << "#{log_state_lines[x].strip}\tNA\t\n"
+		out_string << "#{log_state_lines[x].strip}\tNA\tNA\t\n"
 	end
 end
 
