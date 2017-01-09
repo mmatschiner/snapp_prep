@@ -181,13 +181,15 @@ else
 		uniq_bases_at_this_pos = bases_at_this_pos.uniq
 		# Issue a warning if non-biallelic sites are excluded.
 		if uniq_bases_at_this_pos.size == 2
-		# Randomly define what's "0" and "2".
-		uniq_bases_at_this_pos.shuffle!
+			# Randomly define what's "0" and "2".
+			uniq_bases_at_this_pos.shuffle!
 			seqs.size.times do |x|
 				if seqs[x][pos] == uniq_bases_at_this_pos[0]
 					binary_seqs[x] << "0"
 				elsif seqs[x][pos] == uniq_bases_at_this_pos[1]
 					binary_seqs[x] << "2"
+				elsif missing_chars.include?(seqs[x][pos])
+					binary_seqs[x] << "-"
 				else
 					binary_seqs[x] << "1"
 				end
