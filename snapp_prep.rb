@@ -73,6 +73,7 @@ end
 unique_seq_chars = []
 binary_chars = ["0","1","2"]
 nucleotide_chars = ["A","C","G","T","R","Y","S","W","K","M"]
+ambiguous_chars = ["R","Y","S","W","K","M"]
 missing_chars = ["-","?","N"]
 seqs.each do |s|
 	s.size.times do |pos|
@@ -190,8 +191,11 @@ else
 					binary_seqs[x] << "2"
 				elsif missing_chars.include?(seqs[x][pos])
 					binary_seqs[x] << "-"
-				else
+				elsif ambiguous_chars.include?(seqs[x][pos])
 					binary_seqs[x] << "1"
+				else
+					puts "ERROR: Found unexpected base at position #{pos+1}: #{seqs[x][pos]}!"
+					exit(1)
 				end
 			end
 		elsif uniq_bases_at_this_pos.size == 0
