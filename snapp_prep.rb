@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Michael Matschiner, 2016-09-30
+# Michael Matschiner, 2018-04-27
 #
 # This script prepares XML format input files for the software SNAPP (http://beast2.org/snapp/),
 # given a phylip format SNP matrix, a table linking species IDs and specimen IDs, and a file
@@ -21,9 +21,17 @@
 # Load required libraries.
 require 'optparse'
 
+# Feedback.
+puts ""
+puts "snapp_prep.rb"
+puts ""
+puts "----------------------------------------------------------------------------------------"
+puts ""
+
 # Define default options.
 options = {}
-options[:phylip] = "example.phy"
+options[:phylip] = nil
+options[:vcf] = nil
 options[:table] = "example.spc.txt"
 options[:constraints] = "example.con.txt"
 options[:tree] = nil
@@ -38,11 +46,12 @@ ARGV << '-h' if ARGV.empty?
 opt_parser = OptionParser.new do |opt|
 	opt.banner = "Usage: ruby #{$0} [OPTIONS]"
 	opt.separator  ""
-	opt.separator  "Example"
-	opt.separator  "ruby #{$0} -p #{options[:phylip]} -t #{options[:table]} -c #{options[:constraints]} -x #{options[:xml]}"
+	opt.separator  "Example:"
+	opt.separator  "ruby #{$0} -p example.phy -t #{options[:table]} -c #{options[:constraints]} -x #{options[:xml]}"
 	opt.separator  ""
-	opt.separator  "Options"
-	opt.on("-p","--phylip FILENAME","File with SNP data in phylip format (default: #{options[:phylip]}).") {|p| options[:phylip] = p}
+	opt.separator  "Options:"
+	opt.on("-p","--phylip FILENAME","File with SNP data in phylip format (default: none).") {|p| options[:phylip] = p}
+	opt.on("-v","--vcf FILENAME","File with SNP data in vcf format (default: none).") {|v| options[:vcf] = v}
 	opt.on("-t","--table FILENAME","File with table linking species and specimens (default: #{options[:table]}).") {|t| options[:table] = t}
 	opt.on("-c","--constraints FILENAME","File with age constraint information (default: #{options[:constraints]}).") {|c| options[:constraints] = c}
 	opt.on("-s","--starting-tree FILENAME","File with starting tree in Nexus or Newick format (default: none).") {|s| options[:tree] = s}
@@ -59,45 +68,184 @@ opt_parser = OptionParser.new do |opt|
 end
 opt_parser.parse!
 
-# Read the phylip file.
-phylip_file =  File.open(options[:phylip])
-phylip_lines = phylip_file.readlines
-specimen_ids = []
-seqs = []
-phylip_lines[1..-1].each do |l|
-	specimen_ids << l.split[0]
-	seqs << l.split[1].upcase
+# Make sure that input is provided in either phylip or vcf format.
+if options[:phylip] == nil and options[:vcf] == nil
+	puts "ERROR: An input file must be provided, either in phylip format with option '-p' or in vcf format with option '-v'!"
+	exit(1)
+elsif options[:phylip] != nil and options[:vcf] != nil
+	puts "ERROR: Only one of the two options '-p' and '-v' can be used!"
+	exit(1)	
 end
 
-# Recognize the sequence format (nucleotides or binary).
-unique_seq_chars = []
+# Initiate a warn string and counts for excluded sites.
+warn_string = ""
+number_of_excluded_sites_missing = 0
+number_of_excluded_sites_monomorphic = 0
+number_of_excluded_sites_triallelic = 0
+number_of_excluded_sites_tetraallelic = 0
+number_of_excluded_sites_indel = 0
+
+# Initiate arrays for specimen ids and sequences.
+specimen_ids = []
+seqs = []
+
+# Define various characters.
 binary_chars = ["0","1","2"]
 nucleotide_chars = ["A","C","G","T","R","Y","S","W","K","M"]
 ambiguous_chars = ["R","Y","S","W","K","M"]
 missing_chars = ["-","?","N"]
-seqs.each do |s|
-	s.size.times do |pos|
-		unless missing_chars.include?(s[pos])
-			unique_seq_chars << s[pos] unless unique_seq_chars.include?(s[pos])
+
+# Read the phylip file.
+if options[:phylip] != nil
+	phylip_file =  File.open(options[:phylip])
+	phylip_lines = phylip_file.readlines
+	phylip_lines[1..-1].each do |l|
+		specimen_ids << l.split[0]
+		seqs << l.split[1].upcase
+	end
+	# Recognize the sequence format (nucleotides or binary).
+	unique_seq_chars = []
+	seqs.each do |s|
+		s.size.times do |pos|
+			unless missing_chars.include?(s[pos])
+				unique_seq_chars << s[pos] unless unique_seq_chars.include?(s[pos])
+			end
 		end
 	end
+	sequence_format_is_nucleotide = true
+	sequence_format_is_binary = true
+	unique_seq_chars.each do |c|
+		sequence_format_is_binary = false unless binary_chars.include?(c)
+		sequence_format_is_nucleotide = false unless nucleotide_chars.include?(c)
+	end
+	if sequence_format_is_binary == false and sequence_format_is_nucleotide == false
+		puts "ERROR: Sequence format could not be recognized as either 'nucleotide' or 'binary'!"
+		exit(1)
+	end
 end
-sequence_format_is_nucleotide = true
-sequence_format_is_binary = true
-unique_seq_chars.each do |c|
-	sequence_format_is_binary = false unless binary_chars.include?(c)
-	sequence_format_is_nucleotide = false unless nucleotide_chars.include?(c)
-end
-if sequence_format_is_binary == false and sequence_format_is_nucleotide == false
-	puts "ERROR: Sequence format could not be recognized as either 'nucleotide' or 'binary'!"
-	exit(1)
+
+# Alternatively, read the vcf file.
+tmp_line_count_all = 0
+if options[:vcf] != nil
+	vcf_file =  File.open(options[:vcf])
+	vcf_lines = vcf_file.readlines
+	vcf_header_line = ""
+	vcf_lines.each do |l|
+		if l[0..1] != "##"
+			if l[0] == "#" and vcf_header_line == ""
+				vcf_header_line = l
+				vcf_header_line_ary = vcf_header_line.split
+				specimen_ids = vcf_header_line_ary[9..-1]
+				specimen_ids.size.times {seqs << ""}
+			elsif vcf_header_line != ""
+				tmp_line_count_all += 1
+				line_ary = l.split
+				ref = line_ary[3]
+				alt = line_ary[4]
+				if ref.size == 1 and alt.size == 1
+					format_str = line_ary[8]
+					gt_index = format_str.split(":").index("GT")
+					if gt_index == nil
+						puts "ERROR: Expected 'GT' in FORMAT field but could not find it!"
+						exit(1)
+					end
+					specimen_index = 0
+					line_ary[9..-1].each do |rec|
+						gt = rec.split(":")[gt_index]
+						if gt.include?("/")
+							gt1 = gt.split("/")[0]
+							gt2 = gt.split("/")[1]
+						elsif gt.include?("|")
+							gt1 = gt.split("|")[0]
+							gt2 = gt.split("|")[1]
+						else
+							puts "ERROR: Expected alleles to be separated by '/' or '|' but did not found such separators!"
+							exit(1)
+						end
+						if ["0","1","."].include?(gt1) and ["0","1","."].include?(gt2)
+							if gt1 == "0"
+								base1 = ref
+							elsif gt1 == "1"
+								base1 = alt
+							else
+								base1 = "N"
+							end
+							if gt2 == "0"
+								base2 = ref
+							elsif gt2 == "1"
+								base2 = alt
+							else
+								base2 = "N"
+							end
+							if base1 == "N" or base2 == "N"
+								seqs[specimen_index] << "N"
+							elsif [base1,base2].sort == ["A","A"]
+								seqs[specimen_index] << "A"
+							elsif [base1,base2].sort == ["A","C"]
+								seqs[specimen_index] << "M"
+							elsif [base1,base2].sort == ["A","G"]
+								seqs[specimen_index] << "R"
+							elsif [base1,base2].sort == ["A","T"]
+								seqs[specimen_index] << "W"
+							elsif [base1,base2].sort == ["C","C"]
+								seqs[specimen_index] << "C"
+							elsif [base1,base2].sort == ["C","G"]
+								seqs[specimen_index] << "S"
+							elsif [base1,base2].sort == ["C","T"]
+								seqs[specimen_index] << "Y"
+							elsif [base1,base2].sort == ["G","G"]
+								seqs[specimen_index] << "G"
+							elsif [base1,base2].sort == ["G","T"]
+								seqs[specimen_index] << "K"
+							elsif [base1,base2].sort == ["T","T"]
+								seqs[specimen_index] << "T"
+							else
+								puts "ERROR: Unexpected genotype: #{base1} and #{base2}!"
+								exit(1)
+							end
+						else
+							puts "ERROR: Expected genotypes to be bi-allelic and contain only 0s and/or 1s or missing data marked with '.', but found #{gt1} and #{gt2}!"
+							exit(1)
+						end
+						specimen_index += 1
+					end
+				elsif ref.size > 1 and ref.include?(",") == false
+					number_of_excluded_sites_indel += 1
+				elsif alt.size > 1 and alt.include?(",") == false
+					number_of_excluded_sites_indel += 1
+				elsif ref.include?(",") or alt.include?(",")
+					number_of_ref_and_alt_alleles = ref.count(",") + alt.count(",") + 2
+					if number_of_ref_and_alt_alleles == 3
+						number_of_excluded_sites_triallelic += 1
+					elsif number_of_ref_and_alt_alleles == 4
+						number_of_excluded_sites_tetraallelic += 1
+					else
+						puts "ERROR: Unexpected combination of REF and ALT alleles (REF: #{ref}; ALT: #{alt})!"
+						exit(1)
+					end
+				end
+			else
+				puts "ERROR: Expected a vcf header line beginning with '#CHROM' but could not find it!"
+				exit(1)
+			end
+		end
+	end
+
+	# Make sure that all sequences have a positive and equal length.
+	seqs[1..-1].each do |s|
+		if s.size != seqs[0].size
+			puts "ERROR: Sequences have different lengths!"
+			exit(1)
+		end
+	end
+
+	# Specify that the sequence format is nucleotide.
+	sequence_format_is_binary = false
 end
 
 # If necessary, translate the sequences into SNAPP's "0", "1", "2" code, where "1" is heterozygous.
 binary_seqs = []
 seqs.size.times{binary_seqs << ""}
-warn_string = ""
-number_of_excluded_sites = 0
 if sequence_format_is_binary
 	seqs[0].size.times do |pos|
 		alleles_at_this_pos = []
@@ -110,16 +258,10 @@ if sequence_format_is_binary
 				binary_seqs[x] << seqs[x][pos]
 			end
 		elsif uniq_alleles_at_this_pos.size == 0
-			warn_string << "WARNING: Site with only missing data excluded at position #{pos+1}!\n"
-			number_of_excluded_sites += 1
+			number_of_excluded_sites_missing += 1
 		elsif uniq_alleles_at_this_pos.size == 1
-			warn_string << "WARNING: Monomorphic site (allele: '#{uniq_alleles_at_this_pos[0]}') excluded at position #{pos+1}!\n"
-			number_of_excluded_sites += 1
+			number_of_excluded_sites_monomorphic += 1
 		end
-	end
-	unless warn_string == ""
-		warn_string << "\n"
-		puts warn_string
 	end
 
 	# Check if the total number of '0' and '2' in the data set are similar.
@@ -133,9 +275,8 @@ if sequence_format_is_binary
 	tolerance = 0.01
 	if (total_number_of_0s/(total_number_of_0s+total_number_of_2s).to_f - goal).abs > tolerance
 		warn_string << "WARNING: The number of '0' and '2' in the data set is expected to be similar, however,\n"
-		warn_string << "    they differ by more than #{tolerance*100.round} percent!\n"
+		warn_string << "    they differ by more than #{tolerance*100.round} percent.\n"
 		warn_string << "\n"
-		puts warn_string
 	end
 else
 	seqs[0].size.times do |pos|
@@ -180,7 +321,7 @@ else
 			end
 		end
 		uniq_bases_at_this_pos = bases_at_this_pos.uniq
-		# Issue a warning if non-biallelic sites are excluded.
+		# Issue a warning if non-bi-allelic sites are excluded.
 		if uniq_bases_at_this_pos.size == 2
 			# Randomly define what's "0" and "2".
 			uniq_bases_at_this_pos.shuffle!
@@ -199,25 +340,17 @@ else
 				end
 			end
 		elsif uniq_bases_at_this_pos.size == 0
-			warn_string << "WARNING: Site with only missing data excluded at position #{pos+1}!\n"
-			number_of_excluded_sites += 1
+			number_of_excluded_sites_missing += 1
 		elsif uniq_bases_at_this_pos.size == 1
-			warn_string << "WARNING: Monomorphic site (allele: '#{uniq_bases_at_this_pos[0]}') excluded at position #{pos+1}!\n"
-			number_of_excluded_sites += 1
+			number_of_excluded_sites_monomorphic += 1
 		elsif uniq_bases_at_this_pos.size == 3
-			warn_string << "WARNING: Site with three alleles (alleles: '#{uniq_bases_at_this_pos[0]}', '#{uniq_bases_at_this_pos[1]}', '#{uniq_bases_at_this_pos[2]}') excluded at position #{pos+1}!\n"
-			number_of_excluded_sites += 1
+			number_of_excluded_sites_triallelic += 1
 		elsif uniq_bases_at_this_pos.size == 4
-			warn_string << "WARNING: Site with four alleles (alleles: '#{uniq_bases_at_this_pos[0]}', '#{uniq_bases_at_this_pos[1]}', '#{uniq_bases_at_this_pos[2]}', '#{uniq_bases_at_this_pos[3]}') excluded at position #{pos+1}!\n"
-			number_of_excluded_sites += 1
+			number_of_excluded_sites_tetraallelic += 1
 		else
 			puts "ERROR: Found unexpected number of alleles at position #{pos+1}!"
 			exit(1)
 		end
-	end
-	unless warn_string == ""
-		warn_string << "\n"
-		puts warn_string
 	end
 end
 
@@ -237,6 +370,74 @@ table_lines.each do |l|
 	end
 end
 
+# Make sure that the arrays table_specimens and specimen_ids are identical when sorted.
+unless table_specimens.sort == specimen_ids.sort
+	puts "ERROR: The specimens listed in file #{options[:table]} and those included in the input file are not identical!"
+	exit(1)
+end
+
+# Remove sites at which one or more species have only missing data; these could not be used by SNAPP anyway.
+binary_seqs_for_snapp = []
+binary_seqs.size.times {binary_seqs_for_snapp << ""}
+binary_seqs[0].size.times do |pos|
+	one_or_more_species_have_only_missing_data_at_this_pos = false
+	table_species.uniq.each do |spc|
+		specimens_for_this_species = []
+		table_specimens.size.times do |x|
+			specimens_for_this_species << table_specimens[x] if table_species[x] == spc
+		end
+		alleles_for_this_species_at_this_pos = []
+		specimen_ids.size.times do |x|
+			if specimens_for_this_species.include?(specimen_ids[x])
+				alleles_for_this_species_at_this_pos << binary_seqs[x][pos]
+			end
+		end
+		if alleles_for_this_species_at_this_pos.uniq == ["-"]
+			one_or_more_species_have_only_missing_data_at_this_pos =  true
+		end
+	end
+	# Set all alleles at this position to nil if one species had only missing data.
+	if one_or_more_species_have_only_missing_data_at_this_pos
+		number_of_excluded_sites_missing += 1
+	else
+		binary_seqs.size.times do |x|
+			binary_seqs_for_snapp[x] << binary_seqs[x][pos]
+		end
+	end
+end
+binary_seqs = binary_seqs_for_snapp
+
+# Compose the warn string if necessary.
+if number_of_excluded_sites_missing > 0
+	warn_string << "WARNING: Excluded #{number_of_excluded_sites_missing} site"
+	warn_string << "s" if number_of_excluded_sites_missing > 1
+	warn_string << " with only missing data in one or more species.\n"
+end
+if number_of_excluded_sites_monomorphic > 0
+	warn_string << "WARNING: Excluded #{number_of_excluded_sites_monomorphic} monomorphic site"
+	warn_string << "s" if number_of_excluded_sites_monomorphic > 1
+	warn_string << ".\n"
+end
+if number_of_excluded_sites_triallelic > 0
+	warn_string << "WARNING: Excluded #{number_of_excluded_sites_triallelic} tri-allelic site"
+	warn_string << "s" if number_of_excluded_sites_triallelic > 1
+	warn_string << ".\n"
+end
+if number_of_excluded_sites_tetraallelic > 0
+	warn_string << "WARNING: Excluded #{number_of_excluded_sites_tetraallelic} tetra-allelic site"
+	warn_string << "s" if number_of_excluded_sites_tetraallelic > 1
+	warn_string << ".\n"
+end
+
+# If there were any warning, print them.
+unless warn_string == ""
+	warn_string << "\n"
+	puts warn_string
+	info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
+	info_string << "\n"
+	puts info_string
+end
+
 # Read the file with age constraint information.
 constraint_file = File.open(options[:constraints])
 constraint_lines = constraint_file.readlines
@@ -249,7 +450,7 @@ constraint_lines.each do |l|
 	end
 end
 if constraint_strings.size == 0
-	puts "WARNING: No age constraints could be found in file #{options[:constraints]}! You will have to manually modify the XML file to include age constraints."
+	puts "WARNING: No age constraints could be found in file #{options[:constraints]}. You will have to manually modify the XML file to include age constraints."
 end
 if cladeage_constraints_used
 	info_string = "INFO: CladeAge constraints are specified in file #{options[:constraints]}.\n"
@@ -292,11 +493,6 @@ unless options[:no_annotation]
 		snapp_string << "The SNP data matrix, taken from file #{options[:phylip]}.\n"
 	else
 		snapp_string << "The SNP data matrix, converted to binary format from file #{options[:phylip]}.\n"
-	end
-	if number_of_excluded_sites == 1
-		snapp_string << "1 site was found to be non-biallelic and has been exluded.\n"
-	elsif number_of_excluded_sites > 1
-		snapp_string << "#{number_of_excluded_sites} sites were found to be non-biallelic and have been exluded.\n"
 	end
 	snapp_string << "-->\n"
 end
@@ -467,9 +663,9 @@ end
 unless options[:no_annotation]
 	snapp_string << "            <!--\n"
 	snapp_string << "            The clock rate affects the model only by scaling branches before likelihood calculations.\n"
-	snapp_string << "            A one-over-x prior distribution is used, which has the advantage that the shape of its\n"
+	snapp_string << "            A one-on-x prior distribution is used, which has the advantage that the shape of its\n"
 	snapp_string << "            distribution is independent of the time scales used, and can therefore equally be applied\n"
-	snapp_string << "            in phylogenetic analyses of very recent or old groups. However, note that the one-over-x\n"
+	snapp_string << "            in phylogenetic analyses of very recent or old groups. However, note that the one-on-x\n"
 	snapp_string << "            prior distribution is not a proper probability distribution as its total probability mass\n"
 	snapp_string << "            does not sum to 1. For this reason, this prior distribution can not be used for Bayes Factor\n"
 	snapp_string << "            comparison based on Path Sampling or Stepping Stone analyses. If such analyses are to be\n"
@@ -484,7 +680,7 @@ unless options[:no_annotation]
 	snapp_string << "            <!--\n"
 	snapp_string << "            The scaling of branch lengths based on the clock rate does not affect the evaluation of the\n"
 	snapp_string << "            likelihood of the species tree given the speciation rate lambda. Thus, lambda is measured in\n"
-	snapp_string << "            the same time units as the unscaled species tree. As for the clock rate, a one-over-x prior\n"
+	snapp_string << "            the same time units as the unscaled species tree. As for the clock rate, a one-on-x prior\n"
 	snapp_string << "            distribution is used, and an alternative prior distribution will need to be chosen if Bayes\n"
 	snapp_string << "            Factor comparisons are to be performed.\n"
 	snapp_string << "            -->\n"
@@ -624,4 +820,4 @@ snapp_string << "</beast>\n"
 # Write the SNAPP input file.
 snapp_file = File.open(options[:xml],"w")
 snapp_file.write(snapp_string)
-puts "Wrote SNAPP input in XML format to file #{options[:xml]}."
+puts "Wrote SNAPP input in XML format to file #{options[:xml]}.\n\n"

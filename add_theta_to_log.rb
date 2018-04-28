@@ -87,7 +87,7 @@ out_string = "#{log_header_line.strip}\ttheta\tpopulation_size\t\n"
 log_state_numbers.size.times do |x|
 	if tree_states.include?(log_state_numbers[x])
 		theta = thetas[tree_states.index(log_state_numbers[x])]
-		mutation_rate = log_clock_rates[x]/(1000000.0/options[:generation_time])		
+		mutation_rate = log_clock_rates[x]/(1000000.0/options[:generation_time])
 		pop_size = theta/(4.0*mutation_rate)
 		out_string << "#{log_state_lines[x].strip}\t#{theta}\t#{pop_size}\t\n"
 	else
