@@ -100,8 +100,10 @@ if options[:phylip] != nil
 	phylip_file =  File.open(options[:phylip])
 	phylip_lines = phylip_file.readlines
 	phylip_lines[1..-1].each do |l|
-		specimen_ids << l.split[0]
-		seqs << l.split[1].upcase
+		unless l.strip == ""
+			specimen_ids << l.split[0]
+			seqs << l.split[1].upcase
+		end
 	end
 	# Recognize the sequence format (nucleotides or binary).
 	unique_seq_chars = []
@@ -548,6 +550,11 @@ constraint_count = 0
 constraint_strings.each do |c|
 	constraint_count += 1
 	constraint_ary = c.split
+	unless constraint_ary.size == 3
+		puts "ERROR: Expected three character strings per line for each constraint specification, but found"
+		puts "    '#{c.strip}',"
+		exit(1)
+	end
 	constraint_distribution = constraint_ary[0].downcase
 	constraint_placement = constraint_ary[1].downcase
 	constraint_clade = constraint_ary[2]
