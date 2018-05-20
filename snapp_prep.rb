@@ -420,7 +420,7 @@ binary_seqs = binary_seqs_for_snapp
 # If a maximum number of SNPs has been set, reduce the data set to this number.
 number_of_excluded_sites_due_to_max = 0
 if options[:max_snps] != nil
-	if options[:max_snps] > binary_seqs[0].size
+	if options[:max_snps] < binary_seqs[0].size
 		seq_indices = []
 		binary_seqs.size.times {seq_indices << x}
 		selected_seq_indices = seq_indices.sample(options[:max_snps]).sort
