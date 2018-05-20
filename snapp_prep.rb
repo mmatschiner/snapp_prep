@@ -426,7 +426,7 @@ if options[:max_snps] != nil
 		selected_seq_indices = seq_indices.sample(options[:max_snps]).sort
 		binary_seqs_red = []
 		binary_seqs.each do |s|
-			binary_seq_red = []
+			binary_seq_red = ""
 			selected_seq_indices.each do |i|
 				binary_seq_red << s[i]
 			end
