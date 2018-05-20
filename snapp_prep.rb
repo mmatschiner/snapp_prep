@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Michael Matschiner, 2018-04-27
+# Michael Matschiner, 2018-05-21
 #
 # This script prepares XML format input files for the software SNAPP (http://beast2.org/snapp/),
 # given a phylip format SNP matrix, a table linking species IDs and specimen IDs, and a file
@@ -84,6 +84,7 @@ number_of_excluded_sites_monomorphic = 0
 number_of_excluded_sites_triallelic = 0
 number_of_excluded_sites_tetraallelic = 0
 number_of_excluded_sites_indel = 0
+number_of_sites_with_half_call = 0
 
 # Initiate arrays for specimen ids and sequences.
 specimen_ids = []
@@ -152,6 +153,7 @@ if options[:vcf] != nil
 						exit(1)
 					end
 					specimen_index = 0
+					found_half_called_gt = false
 					line_ary[9..-1].each do |rec|
 						gt = rec.split(":")[gt_index]
 						if gt.include?("/")
@@ -179,8 +181,11 @@ if options[:vcf] != nil
 							else
 								base2 = "N"
 							end
-							if base1 == "N" or base2 == "N"
+							if base1 == "N" and base2 == "N"
 								seqs[specimen_index] << "N"
+							elsif base1 == "N" or base2 == "N"
+								seqs[specimen_index] << "N"
+								found_half_called_gt = true
 							elsif [base1,base2].sort == ["A","A"]
 								seqs[specimen_index] << "A"
 							elsif [base1,base2].sort == ["A","C"]
@@ -211,6 +216,7 @@ if options[:vcf] != nil
 						end
 						specimen_index += 1
 					end
+					number_of_sites_with_half_call += 1 if found_half_called_gt
 				elsif ref.size > 1 and ref.include?(",") == false
 					number_of_excluded_sites_indel += 1
 				elsif alt.size > 1 and alt.include?(",") == false
@@ -410,6 +416,11 @@ end
 binary_seqs = binary_seqs_for_snapp
 
 # Compose the warn string if necessary.
+if number_of_sites_with_half_call > 0
+	warn_string << "WARNING: Found #{number_of_sites_with_half_call} site"
+	warn_string << "s" if number_of_sites_with_half_call > 1
+	warn_string << " with genotypes that were half missing. These were ignored.\n"
+end
 if number_of_excluded_sites_missing > 0
 	warn_string << "WARNING: Excluded #{number_of_excluded_sites_missing} site"
 	warn_string << "s" if number_of_excluded_sites_missing > 1
