@@ -422,7 +422,7 @@ number_of_excluded_sites_due_to_max = 0
 if options[:max_snps] != nil
 	if options[:max_snps] < binary_seqs[0].size
 		seq_indices = []
-		binary_seqs.size.times {seq_indices << x}
+		binary_seqs[0].size.times {|x| seq_indices << x}
 		selected_seq_indices = seq_indices.sample(options[:max_snps]).sort
 		binary_seqs_red = []
 		binary_seqs.each do |s|
