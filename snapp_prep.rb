@@ -446,10 +446,12 @@ end
 unless warn_string == ""
 	warn_string << "\n"
 	puts warn_string
-	info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
-	info_string << "\n"
-	puts info_string
 end
+
+# Print the info string.
+info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
+info_string << "\n"
+puts info_string
 
 # Read the file with age constraint information.
 constraint_file = File.open(options[:constraints])
