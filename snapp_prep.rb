@@ -419,7 +419,7 @@ binary_seqs = binary_seqs_for_snapp
 if number_of_sites_with_half_call > 0
 	warn_string << "WARNING: Found #{number_of_sites_with_half_call} site"
 	warn_string << "s" if number_of_sites_with_half_call > 1
-	warn_string << " with genotypes that were half missing. These were ignored.\n"
+	warn_string << " with genotypes that were half missing. These genotypes were ignored.\n"
 end
 if number_of_excluded_sites_missing > 0
 	warn_string << "WARNING: Excluded #{number_of_excluded_sites_missing} site"
