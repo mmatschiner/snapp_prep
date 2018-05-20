@@ -37,6 +37,7 @@ options[:constraints] = "example.con.txt"
 options[:tree] = nil
 options[:length] = 500000
 options[:weight] = 1.0
+options[:max_snps] = nil
 options[:xml] = "snapp.xml"
 options[:out] = "snapp"
 options[:no_annotation] = false
@@ -57,6 +58,7 @@ opt_parser = OptionParser.new do |opt|
 	opt.on("-s","--starting-tree FILENAME","File with starting tree in Nexus or Newick format (default: none).") {|s| options[:tree] = s}
 	opt.on("-l","--length LENGTH",Integer,"Number of MCMC generations (default: #{options[:length]}).") {|l| options[:length] = l}
 	opt.on("-w","--weight WEIGHT",Float,"Relative weight of topology operator (default: #{options[:weight]}).") {|w| options[:weight] = w}
+	opt.on("-m","--max-snps NUMBER",Integer,"Maximum number of SNPs to be used (default: #{options[:max_snps]}).") {|m| options[:max_snps] = m}
 	opt.on("-x","--xml FILENAME","Output file in XML format (default: #{options[:xml]}).") {|x| options[:xml] = x}
 	opt.on("-o","--out PREFIX","Prefix for SNAPP's .log and .trees output files (default: snapp).") {|i| options[:out] = i}
 	opt.on("-n","--no-annotation","Do not add explanatory annotation to XML file (default: #{options[:no_annotation]}).") {options[:no_annotation] = true}
@@ -415,6 +417,29 @@ binary_seqs[0].size.times do |pos|
 end
 binary_seqs = binary_seqs_for_snapp
 
+# If a maximum number of SNPs has been set, reduce the data set to this number.
+number_of_excluded_sites_due_to_max = 0
+if max_snps != nil
+	if max_snps > binary_seqs[0].size
+		seq_indices = []
+		binary_seqs.size.times {seq_indices << x}
+		selected_seq_indices = seq_indices.sample(max_snps).sort
+		binary_seqs_red = []
+		binary_seqs.each do |s|
+			binary_seq_red = []
+			selected_seq_indices.each do |i|
+				binary_seq_red << s[i]
+			end
+			binary_seqs_red << binary_seq_red
+		end
+		binary_seqs = binary_seqs_red
+		number_of_excluded_sites_due_to_max = binary_seqs[0].size - max_snps
+	else
+		warn_string << "WARNING: The maximum number of SNPs has been set to #{max_snps}, which is greater\n"
+		warn_string << "    than the number of bi-allelic SNPs with sufficient information for SNAPP.\n"
+	end
+end
+
 # Compose the warn string if necessary.
 if number_of_sites_with_half_call > 0
 	warn_string << "WARNING: Found #{number_of_sites_with_half_call} site"
@@ -449,9 +474,15 @@ unless warn_string == ""
 end
 
 # Print the info string.
-info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
-info_string << "\n"
-puts info_string
+if max_snps == nil
+	info_string = "INFO: Removed #{number_of_excluded_sites_due_to_max} bi-allelic sites due to specified maximum number of #{max_snps} sites.\n"
+	info_string << "\n"
+	puts info_string
+else
+	info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
+	info_string << "\n"
+	puts info_string
+end
 
 # Read the file with age constraint information.
 constraint_file = File.open(options[:constraints])
