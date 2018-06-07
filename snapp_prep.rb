@@ -374,6 +374,8 @@ table_lines.each do |l|
 	header_line = false
 	header_line = true if line_ary[0].downcase == "species" and line_ary[1].downcase == "specimen"
 	header_line = true if line_ary[0].downcase == "species" and line_ary[1].downcase == "specimens"
+	header_line = true if line_ary[0].downcase == "species" and line_ary[1].downcase == "sample"
+	header_line = true if line_ary[0].downcase == "species" and line_ary[1].downcase == "samples"
 	unless header_line
 		table_species << line_ary[0]
 		table_specimens << line_ary[1]
