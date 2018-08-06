@@ -420,6 +420,7 @@ end
 binary_seqs = binary_seqs_for_snapp
 
 # If a maximum number of SNPs has been set, reduce the data set to this number.
+number_of_sites_before_excluding_due_to_max = binary_seqs[0].size
 number_of_excluded_sites_due_to_max = 0
 if options[:max_snps] != nil
 	if options[:max_snps] < binary_seqs[0].size
@@ -435,7 +436,7 @@ if options[:max_snps] != nil
 			binary_seqs_red << binary_seq_red
 		end
 		binary_seqs = binary_seqs_red
-		number_of_excluded_sites_due_to_max = binary_seqs[0].size - options[:max_snps]
+		number_of_excluded_sites_due_to_max = number_of_sites_before_excluding_due_to_max - options[:max_snps]
 	else
 		warn_string << "WARNING: The maximum number of SNPs has been set to #{options[:max_snps]}, which is greater\n"
 		warn_string << "    than the number of bi-allelic SNPs with sufficient information for SNAPP.\n"
@@ -476,7 +477,7 @@ unless warn_string == ""
 end
 
 # Print the info string.
-if options[:max_snps] == nil
+if options[:max_snps] != nil
 	info_string = "INFO: Removed #{number_of_excluded_sites_due_to_max} bi-allelic sites due to specified maximum number of #{options[:max_snps]} sites.\n"
 	info_string << "\n"
 	puts info_string
