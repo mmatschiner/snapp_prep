@@ -355,7 +355,7 @@ else
 				exit(1)
 			end
 			# Use this site unless it it a transition and only transversions are allowed.
-			if transversions == true and transversion_site == false
+			if options[:transversions] == true and transversion_site == false
 				number_of_excluded_sites_transition += 1
 			else
 				# Randomly define what's "0" and "2".
