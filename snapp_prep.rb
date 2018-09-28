@@ -486,7 +486,7 @@ if number_of_excluded_sites_monomorphic > 0
 	warn_string << ".\n"
 end
 if number_of_excluded_sites_transition > 0
-	warn_string << "WARNING: Excluded #{number_of_excluded_sites_transition} monomorphic site"
+	warn_string << "WARNING: Excluded #{number_of_excluded_sites_transition} transition site"
 	warn_string << "s" if number_of_excluded_sites_transition > 1
 	warn_string << ".\n"
 end
