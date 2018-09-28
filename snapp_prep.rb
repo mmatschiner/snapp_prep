@@ -513,7 +513,11 @@ if options[:max_snps] != nil
 	info_string << "\n"
 	puts info_string
 else
-	info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
+	if options[:transversions]
+		info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic transversion sites.\n"
+	else
+		info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
+	end
 	info_string << "\n"
 	puts info_string
 end
