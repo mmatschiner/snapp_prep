@@ -38,6 +38,7 @@ options[:tree] = nil
 options[:length] = 500000
 options[:weight] = 1.0
 options[:max_snps] = nil
+options[:transversions] = false
 options[:xml] = "snapp.xml"
 options[:out] = "snapp"
 options[:no_annotation] = false
@@ -59,6 +60,7 @@ opt_parser = OptionParser.new do |opt|
 	opt.on("-l","--length LENGTH",Integer,"Number of MCMC generations (default: #{options[:length]}).") {|l| options[:length] = l}
 	opt.on("-w","--weight WEIGHT",Float,"Relative weight of topology operator (default: #{options[:weight]}).") {|w| options[:weight] = w}
 	opt.on("-m","--max-snps NUMBER",Integer,"Maximum number of SNPs to be used (default: no maximum).") {|m| options[:max_snps] = m}
+	opt.on("-r","--transversions","Use transversions only (default: #{options[:transversions]}).") {options[:transversions] = true}
 	opt.on("-x","--xml FILENAME","Output file in XML format (default: #{options[:xml]}).") {|x| options[:xml] = x}
 	opt.on("-o","--out PREFIX","Prefix for SNAPP's .log and .trees output files (default: snapp).") {|i| options[:out] = i}
 	opt.on("-n","--no-annotation","Do not add explanatory annotation to XML file (default: #{options[:no_annotation]}).") {options[:no_annotation] = true}
@@ -86,6 +88,7 @@ number_of_excluded_sites_monomorphic = 0
 number_of_excluded_sites_triallelic = 0
 number_of_excluded_sites_tetraallelic = 0
 number_of_excluded_sites_indel = 0
+number_of_excluded_sites_transition = 0
 number_of_sites_with_half_call = 0
 
 # Initiate arrays for specimen ids and sequences.
@@ -333,20 +336,43 @@ else
 		uniq_bases_at_this_pos = bases_at_this_pos.uniq
 		# Issue a warning if non-bi-allelic sites are excluded.
 		if uniq_bases_at_this_pos.size == 2
-			# Randomly define what's "0" and "2".
-			uniq_bases_at_this_pos.shuffle!
-			seqs.size.times do |x|
-				if seqs[x][pos] == uniq_bases_at_this_pos[0]
-					binary_seqs[x] << "0"
-				elsif seqs[x][pos] == uniq_bases_at_this_pos[1]
-					binary_seqs[x] << "2"
-				elsif missing_chars.include?(seqs[x][pos])
-					binary_seqs[x] << "-"
-				elsif ambiguous_chars.include?(seqs[x][pos])
-					binary_seqs[x] << "1"
-				else
-					puts "ERROR: Found unexpected base at position #{pos+1}: #{seqs[x][pos]}!"
-					exit(1)
+			# Determine if this is a transition or transversion site.
+			transversion_site = false
+			if uniq_bases_at_this_pos.sort == ["A","C"]
+				transversion_site = true
+			elsif uniq_bases_at_this_pos.sort == ["A","G"]
+				transversion_site = false
+			elsif uniq_bases_at_this_pos.sort == ["A","T"]
+				transversion_site = true
+			elsif uniq_bases_at_this_pos.sort == ["C","G"]
+				transversion_site = true
+			elsif uniq_bases_at_this_pos.sort == ["C","T"]
+				transversion_site = false
+			elsif uniq_bases_at_this_pos.sort == ["G","T"]
+				transversion_site = true
+			else
+				puts "ERROR: Unexpected combination of unique bases at position #{pos+1}: #{uniq_bases_at_this_pos[0]}, #{uniq_bases_at_this_pos[1]}"
+				exit(1)
+			end
+			# Use this site unless it it a transition and only transversions are allowed.
+			if transversions == true and transversion_site == false
+				number_of_excluded_sites_transition += 1
+			else
+				# Randomly define what's "0" and "2".
+				uniq_bases_at_this_pos.shuffle!
+				seqs.size.times do |x|
+					if seqs[x][pos] == uniq_bases_at_this_pos[0]
+						binary_seqs[x] << "0"
+					elsif seqs[x][pos] == uniq_bases_at_this_pos[1]
+						binary_seqs[x] << "2"
+					elsif missing_chars.include?(seqs[x][pos])
+						binary_seqs[x] << "-"
+					elsif ambiguous_chars.include?(seqs[x][pos])
+						binary_seqs[x] << "1"
+					else
+						puts "ERROR: Found unexpected base at position #{pos+1}: #{seqs[x][pos]}!"
+						exit(1)
+					end
 				end
 			end
 		elsif uniq_bases_at_this_pos.size == 0
@@ -457,6 +483,11 @@ end
 if number_of_excluded_sites_monomorphic > 0
 	warn_string << "WARNING: Excluded #{number_of_excluded_sites_monomorphic} monomorphic site"
 	warn_string << "s" if number_of_excluded_sites_monomorphic > 1
+	warn_string << ".\n"
+end
+if number_of_excluded_sites_transition > 0
+	warn_string << "WARNING: Excluded #{number_of_excluded_sites_transition} monomorphic site"
+	warn_string << "s" if number_of_excluded_sites_transition > 1
 	warn_string << ".\n"
 end
 if number_of_excluded_sites_triallelic > 0
