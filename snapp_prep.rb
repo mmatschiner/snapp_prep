@@ -39,6 +39,7 @@ options[:length] = 500000
 options[:weight] = 1.0
 options[:max_snps] = nil
 options[:transversions] = false
+options[:transitions] = false
 options[:xml] = "snapp.xml"
 options[:out] = "snapp"
 options[:no_annotation] = false
@@ -61,6 +62,7 @@ opt_parser = OptionParser.new do |opt|
 	opt.on("-w","--weight WEIGHT",Float,"Relative weight of topology operator (default: #{options[:weight]}).") {|w| options[:weight] = w}
 	opt.on("-m","--max-snps NUMBER",Integer,"Maximum number of SNPs to be used (default: no maximum).") {|m| options[:max_snps] = m}
 	opt.on("-r","--transversions","Use transversions only (default: #{options[:transversions]}).") {options[:transversions] = true}
+	opt.on("-i","--transitions","Use transitions only (default: #{options[:transitions]}).") {options[:transitions] = true}
 	opt.on("-x","--xml FILENAME","Output file in XML format (default: #{options[:xml]}).") {|x| options[:xml] = x}
 	opt.on("-o","--out PREFIX","Prefix for SNAPP's .log and .trees output files (default: snapp).") {|i| options[:out] = i}
 	opt.on("-n","--no-annotation","Do not add explanatory annotation to XML file (default: #{options[:no_annotation]}).") {options[:no_annotation] = true}
@@ -81,6 +83,12 @@ elsif options[:phylip] != nil and options[:vcf] != nil
 	exit(1)	
 end
 
+# Make sure that the -r and -i options are not used jointly.
+if options[:transversions] and options[:transitions]
+	puts "ERROR: Only one of the two options '-r' and '-i' can be used!"
+	exit(1)
+end
+
 # Initiate a warn string and counts for excluded sites.
 warn_string = ""
 number_of_excluded_sites_missing = 0
@@ -89,6 +97,7 @@ number_of_excluded_sites_triallelic = 0
 number_of_excluded_sites_tetraallelic = 0
 number_of_excluded_sites_indel = 0
 number_of_excluded_sites_transition = 0
+number_of_excluded_sites_transversion = 0
 number_of_sites_with_half_call = 0
 
 # Initiate arrays for specimen ids and sequences.
@@ -354,9 +363,12 @@ else
 				puts "ERROR: Unexpected combination of unique bases at position #{pos+1}: #{uniq_bases_at_this_pos[0]}, #{uniq_bases_at_this_pos[1]}"
 				exit(1)
 			end
-			# Use this site unless it it a transition and only transversions are allowed.
-			if options[:transversions] == true and transversion_site == false
+			transition_site = true
+			transition_site = false if transversion_site == true
+			if options[:transversions] == true and transversion_site == false # If the site is a transition and only transversions are allowed.
 				number_of_excluded_sites_transition += 1
+			elsif options[:transitions] == true and transition_site == false # If the site is a transversion and only transitions are allowed.
+				number_of_excluded_sites_transversion += 1
 			else
 				# Randomly define what's "0" and "2".
 				uniq_bases_at_this_pos.shuffle!
@@ -490,6 +502,11 @@ if number_of_excluded_sites_transition > 0
 	warn_string << "s" if number_of_excluded_sites_transition > 1
 	warn_string << ".\n"
 end
+if number_of_excluded_sites_transversion > 0
+	warn_string << "WARNING: Excluded #{number_of_excluded_sites_transversion} transversion site"
+	warn_string << "s" if number_of_excluded_sites_transversion > 1
+	warn_string << ".\n"
+end
 if number_of_excluded_sites_triallelic > 0
 	warn_string << "WARNING: Excluded #{number_of_excluded_sites_triallelic} tri-allelic site"
 	warn_string << "s" if number_of_excluded_sites_triallelic > 1
@@ -515,6 +532,8 @@ if options[:max_snps] != nil
 else
 	if options[:transversions]
 		info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic transversion sites.\n"
+	elsif options[:transitions]
+		info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic transition sites.\n"
 	else
 		info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
 	end
