@@ -66,8 +66,21 @@ trees_lines = trees_file.readlines
 tree_states = []
 thetas = []
 trees_lines.each do |l|
-	if l.include?("STATE_")
+	if l.include?("tree STATE_")
 		l.match(/STATE_(\d+)\s*=/)
+		tree_state = $1
+		if l.include?("theta")
+			l.match(/theta=([0-9\.\-eE]+)/)
+		elsif l.include?("null")
+			l.match(/null=([0-9\.\-eE]+)/)
+		end
+		theta = $1.to_f
+		if tree_state != nil and theta != nil
+			tree_states << tree_state
+			thetas << theta
+		end
+	elsif l.include?("tree ")
+		l.match(/tree (\d+)\s*=/)
 		tree_state = $1
 		if l.include?("theta")
 			l.match(/theta=([0-9\.\-eE]+)/)
