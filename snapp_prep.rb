@@ -477,7 +477,7 @@ if options[:max_snps] != nil
 		number_of_excluded_sites_due_to_max = number_of_sites_before_excluding_due_to_max - options[:max_snps]
 	else
 		warn_string << "WARNING: The maximum number of SNPs has been set to #{options[:max_snps]}, which is greater\n"
-		warn_string << "    than the number of bi-allelic SNPs with sufficient information for SNAPP.\n"
+		warn_string << "    than the number of bi-allelic SNPs with sufficient information (#{binary_seqs[0].size}) for SNAPP.\n"
 	end
 end
 
