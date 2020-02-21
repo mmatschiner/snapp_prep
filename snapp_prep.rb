@@ -89,6 +89,12 @@ if options[:transversions] and options[:transitions]
 	exit(1)
 end
 
+# Make sure that the specified weight is not negative.
+if options[:weight] < 0
+	puts "ERROR: The specified relative weight of the topology operator must not be negative!"
+	exit(1)
+end
+
 # Initiate a warn string and counts for excluded sites.
 warn_string = ""
 number_of_excluded_sites_missing = 0
@@ -461,7 +467,10 @@ binary_seqs = binary_seqs_for_snapp
 number_of_sites_before_excluding_due_to_max = binary_seqs[0].size
 number_of_excluded_sites_due_to_max = 0
 if options[:max_snps] != nil
-	if options[:max_snps] < binary_seqs[0].size
+	if options[:max_snps] < 1
+		puts "ERROR: The specified maximum number of SNPs must be positive!"
+		exit(1)		
+	elsif options[:max_snps] < binary_seqs[0].size
 		seq_indices = []
 		binary_seqs[0].size.times {|x| seq_indices << x}
 		selected_seq_indices = seq_indices.sample(options[:max_snps]).sort
