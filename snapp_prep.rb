@@ -38,6 +38,7 @@ options[:tree] = nil
 options[:length] = 500000
 options[:weight] = 1.0
 options[:max_snps] = nil
+options[:min_dist] = nil
 options[:transversions] = false
 options[:transitions] = false
 options[:xml] = "snapp.xml"
@@ -61,6 +62,7 @@ opt_parser = OptionParser.new do |opt|
 	opt.on("-l","--length LENGTH",Integer,"Number of MCMC generations (default: #{options[:length]}).") {|l| options[:length] = l}
 	opt.on("-w","--weight WEIGHT",Float,"Relative weight of topology operator (default: #{options[:weight]}).") {|w| options[:weight] = w}
 	opt.on("-m","--max-snps NUMBER",Integer,"Maximum number of SNPs to be used (default: no maximum).") {|m| options[:max_snps] = m}
+	opt.on("-n","--min-dist NUMBER",Integer,"Minimum distance between SNPs to be used (default: no minimum).") {|m| options[:min_dist] = n}
 	opt.on("-r","--transversions","Use transversions only (default: #{options[:transversions]}).") {options[:transversions] = true}
 	opt.on("-i","--transitions","Use transitions only (default: #{options[:transitions]}).") {options[:transitions] = true}
 	opt.on("-x","--xml FILENAME","Output file in XML format (default: #{options[:xml]}).") {|x| options[:xml] = x}
@@ -153,6 +155,8 @@ if options[:vcf] != nil
 	vcf_file =  File.open(options[:vcf])
 	vcf_lines = vcf_file.readlines
 	vcf_header_line = ""
+	lgs = []
+	positions_on_lgs = []
 	vcf_lines.each do |l|
 		if l[0..1] != "##"
 			if l[0] == "#" and vcf_header_line == ""
@@ -163,6 +167,8 @@ if options[:vcf] != nil
 			elsif vcf_header_line != ""
 				tmp_line_count_all += 1
 				line_ary = l.split
+				lg = line_ary[0]
+				position_on_lg = line_ary[1].to_i
 				ref = line_ary[3]
 				alt = line_ary[4]
 				if ref.size == 1 and alt.size == 1
@@ -230,6 +236,8 @@ if options[:vcf] != nil
 								puts "ERROR: Unexpected genotype: #{base1} and #{base2}!"
 								exit(1)
 							end
+							lgs << lg
+							positions_on_lgs << position_on_lg
 						else
 							puts "ERROR: Expected genotypes to be bi-allelic and contain only 0s and/or 1s or missing data marked with '.', but found #{gt1} and #{gt2}!"
 							exit(1)
@@ -267,6 +275,12 @@ if options[:vcf] != nil
 		end
 	end
 
+	# Make sure that information on linkage groups and positions on these have the same length.
+	if lgs.size != seqs[0].size or positions_on_lgs.size != seqs[0].size
+		puts "ERROR: Information on linkage groups or SNP positions is inconsistent with number of genotypes!"
+		exit(1)
+	end
+
 	# Specify that the sequence format is nucleotide.
 	sequence_format_is_binary = false
 end
@@ -274,6 +288,10 @@ end
 # If necessary, translate the sequences into SNAPP's "0", "1", "2" code, where "1" is heterozygous.
 binary_seqs = []
 seqs.size.times{binary_seqs << ""}
+if options[:vcf] != nil
+	binary_lgs = []
+	binary_positions_on_lgs = []
+end
 if sequence_format_is_binary
 	seqs[0].size.times do |pos|
 		alleles_at_this_pos = []
@@ -284,6 +302,10 @@ if sequence_format_is_binary
 		if uniq_alleles_at_this_pos.size == 2 or uniq_alleles_at_this_pos.size == 3
 			seqs.size.times do |x|
 				binary_seqs[x] << seqs[x][pos]
+			end
+			if options[:vcf] != nil
+				binary_lgs << lgs[pos]
+				binary_positions_on_lgs << positions_on_lgs[pos]
 			end
 		elsif uniq_alleles_at_this_pos.size == 0
 			number_of_excluded_sites_missing += 1
@@ -392,6 +414,10 @@ else
 						exit(1)
 					end
 				end
+				if options[:vcf] != nil
+					binary_lgs << lgs[pos]
+					binary_positions_on_lgs << positions_on_lgs[pos]
+				end
 			end
 		elsif uniq_bases_at_this_pos.size == 0
 			number_of_excluded_sites_missing += 1
@@ -405,6 +431,14 @@ else
 			puts "ERROR: Found unexpected number of alleles at position #{pos+1}!"
 			exit(1)
 		end
+	end
+end
+
+# Make sure that information on linkage groups and positions on these have the same length.
+if options[:vcf] != nil
+	if binary_lgs.size != binary_seqs[0].size or binary_positions_on_lgs.size != binary_seqs[0].size
+		puts "ERROR: Information on linkage groups or SNP positions is inconsistent with number of genotypes!"
+		exit(1)
 	end
 end
 
@@ -433,8 +467,12 @@ unless table_specimens.sort == specimen_ids.sort
 end
 
 # Remove sites at which one or more species have only missing data; these could not be used by SNAPP anyway.
-binary_seqs_for_snapp = []
-binary_seqs.size.times {binary_seqs_for_snapp << ""}
+binary_seqs_filtered = []
+binary_seqs.size.times {binary_seqs_filtered << ""}
+if options[:vcf] != nil
+	binary_lgs_filtered = []
+	binary_positions_on_lgs_filtered = []
+end
 binary_seqs[0].size.times do |pos|
 	one_or_more_species_have_only_missing_data_at_this_pos = false
 	table_species.uniq.each do |spc|
@@ -457,11 +495,48 @@ binary_seqs[0].size.times do |pos|
 		number_of_excluded_sites_missing += 1
 	else
 		binary_seqs.size.times do |x|
-			binary_seqs_for_snapp[x] << binary_seqs[x][pos]
+			binary_seqs_filtered[x] << binary_seqs[x][pos]
+		end
+		if options[:vcf] != nil
+			binary_lgs_filtered << binary_lgs[pos]
+			binary_positions_on_lgs_filtered << binary_positions_on_lgs[pos]
 		end
 	end
 end
-binary_seqs = binary_seqs_for_snapp
+binary_seqs = binary_seqs_filtered
+if options[:vcf] != nil
+	binary_lgs = binary_lgs_filtered
+	binary_positions_on_lgs = binary_positions_on_lgs_filtered
+end
+
+# Make sure that information on linkage groups and positions on these have the same length.
+if options[:vcf] != nil
+	if binary_lgs.size != binary_seqs[0].size or binary_positions_on_lgs.size != binary_seqs[0].size
+		puts "ERROR: Information on linkage groups or SNP positions is inconsistent with number of genotypes!"
+		exit(1)
+	end
+end
+
+# If a minimum distance between SNPs has been set, thin the data set according to this number.
+if options[:vcf] != nil and options[:min_dist] > 1
+	number_of_excluded_sites_due_to_min_dist = 0
+	binary_seqs_filtered = []
+	binary_seqs.size.times {binary_seqs_filtered << ""}
+	last_used_lg = nil
+	last_used_pos_on_lg = nil
+	binary_seqs[0].size.times do |pos|
+		if last_used_lg != binary_lgs[pos] or last_used_pos_on_lg <= binary_positions_on_lgs[pos] - options[:min_dist]
+			last_used_lg = binary_lgs[pos]
+			last_used_pos_on_lg = binary_positions_on_lgs[pos]
+			binary_seqs.size.times do |x|
+				binary_seqs_filtered[x] << binary_seqs[x][pos]
+			end
+		else
+			number_of_excluded_sites_due_to_min_dist += 1
+		end
+	end
+	binary_seqs = binary_seqs_filtered
+end
 
 # If a maximum number of SNPs has been set, reduce the data set to this number.
 number_of_sites_before_excluding_due_to_max = binary_seqs[0].size
@@ -533,19 +608,24 @@ unless warn_string == ""
 	puts warn_string
 end
 
-# Print the info string.
+# Compose the info string if necessary.
+info_string = ""
+if options[:vcf] != nil and options[:min_dist] > 1
+	info_string << "INFO: Removed #{number_of_excluded_sites_due_to_min_dist} bi-allelic sites due to specified minimum distance between sites of #{options[:min_dist]} bp.\n"
+end
 if options[:max_snps] != nil
-	info_string = "INFO: Removed #{number_of_excluded_sites_due_to_max} bi-allelic sites due to specified maximum number of #{options[:max_snps]} sites.\n"
-	info_string << "\n"
-	puts info_string
+	info_string << "INFO: Removed #{number_of_excluded_sites_due_to_max} bi-allelic sites due to specified maximum number of #{options[:max_snps]} sites.\n"
+end
+if options[:transversions]
+	info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic transversion sites.\n"
+elsif options[:transitions]
+	info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic transition sites.\n"
 else
-	if options[:transversions]
-		info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic transversion sites.\n"
-	elsif options[:transitions]
-		info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic transition sites.\n"
-	else
-		info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
-	end
+	info_string = "INFO: Retained #{binary_seqs[0].size} bi-allelic sites.\n"
+end
+
+# If there were any infos, print them.
+unless info_string == ""
 	info_string << "\n"
 	puts info_string
 end
