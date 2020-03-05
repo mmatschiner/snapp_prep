@@ -182,6 +182,7 @@ if options[:vcf] != nil
 					found_half_called_gt = false
 					line_ary[9..-1].each do |rec|
 						gt = rec.split(":")[gt_index]
+						gt = "./." if gt == "."
 						if gt.include?("/")
 							gt1 = gt.split("/")[0]
 							gt2 = gt.split("/")[1]
