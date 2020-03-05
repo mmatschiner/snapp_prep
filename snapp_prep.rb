@@ -236,14 +236,14 @@ if options[:vcf] != nil
 								puts "ERROR: Unexpected genotype: #{base1} and #{base2}!"
 								exit(1)
 							end
-							lgs << lg
-							positions_on_lgs << position_on_lg
 						else
 							puts "ERROR: Expected genotypes to be bi-allelic and contain only 0s and/or 1s or missing data marked with '.', but found #{gt1} and #{gt2}!"
 							exit(1)
 						end
 						specimen_index += 1
 					end
+					lgs << lg
+					positions_on_lgs << position_on_lg
 					number_of_sites_with_half_call += 1 if found_half_called_gt
 				elsif ref.size > 1 and ref.include?(",") == false
 					number_of_excluded_sites_indel += 1
