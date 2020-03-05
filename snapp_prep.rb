@@ -190,6 +190,7 @@ if options[:vcf] != nil
 							gt2 = gt.split("|")[1]
 						else
 							puts "ERROR: Expected alleles to be separated by '/' or '|' but did not found such separators!"
+							puts l # TODO XXX remove
 							exit(1)
 						end
 						if ["0","1","."].include?(gt1) and ["0","1","."].include?(gt2)
@@ -278,7 +279,7 @@ if options[:vcf] != nil
 	# Make sure that information on linkage groups and positions on these have the same length.
 	if lgs.size != seqs[0].size or positions_on_lgs.size != seqs[0].size
 		puts "ERROR: Information on linkage groups or SNP positions is inconsistent with number of genotypes!"
-		puts lgs.size
+		puts lgs.size # Todo Remove
 		puts seqs[0].size
 		puts positions_on_lgs.size
 		exit(1)
