@@ -278,6 +278,9 @@ if options[:vcf] != nil
 	# Make sure that information on linkage groups and positions on these have the same length.
 	if lgs.size != seqs[0].size or positions_on_lgs.size != seqs[0].size
 		puts "ERROR: Information on linkage groups or SNP positions is inconsistent with number of genotypes!"
+		puts lgs.size
+		puts seqs[0].size
+		puts positions_on_lgs.size
 		exit(1)
 	end
 
