@@ -453,6 +453,7 @@ table_lines = table_file.readlines
 table_species = []
 table_specimens = []
 table_lines.each do |l|
+	skip if l.strip == ""
 	line_ary = l.split
 	header_line = false
 	header_line = true if line_ary[0].downcase == "species" and line_ary[1].downcase == "specimen"
