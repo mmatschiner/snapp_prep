@@ -524,7 +524,7 @@ if options[:vcf] != nil
 end
 
 # If a minimum distance between SNPs has been set, thin the data set according to this number.
-if options[:vcf] != nil and options[:min_dist] > 1
+if options[:vcf] != nil and options[:min_dist] != nil and options[:min_dist] > 1
 	number_of_excluded_sites_due_to_min_dist = 0
 	binary_seqs_filtered = []
 	binary_seqs.size.times {binary_seqs_filtered << ""}
@@ -616,7 +616,7 @@ end
 
 # Compose the info string if necessary.
 info_string = ""
-if options[:vcf] != nil and options[:min_dist] > 1
+if options[:vcf] != nil and options[:min_dist] != nil and options[:min_dist] > 1
 	info_string << "INFO: Removed #{number_of_excluded_sites_due_to_min_dist} bi-allelic sites due to specified minimum distance between sites of #{options[:min_dist]} bp.\n"
 end
 if options[:max_snps] != nil
