@@ -524,21 +524,36 @@ if options[:vcf] != nil
 end
 
 # If a minimum distance between SNPs has been set, thin the data set according to this number.
-if options[:vcf] != nil and options[:min_dist] != nil and options[:min_dist] > 1
+if options[:min_dist] != nil and options[:min_dist] > 1
 	number_of_excluded_sites_due_to_min_dist = 0
 	binary_seqs_filtered = []
 	binary_seqs.size.times {binary_seqs_filtered << ""}
-	last_used_lg = nil
-	last_used_pos_on_lg = nil
-	binary_seqs[0].size.times do |pos|
-		if last_used_lg != binary_lgs[pos] or last_used_pos_on_lg <= binary_positions_on_lgs[pos] - options[:min_dist]
-			last_used_lg = binary_lgs[pos]
-			last_used_pos_on_lg = binary_positions_on_lgs[pos]
-			binary_seqs.size.times do |x|
-				binary_seqs_filtered[x] << binary_seqs[x][pos]
+	if options[:vcf] != nil 
+		last_used_lg = nil
+		last_used_pos_on_lg = nil
+		binary_seqs[0].size.times do |pos|
+			if last_used_lg != binary_lgs[pos] or last_used_pos_on_lg <= binary_positions_on_lgs[pos] - options[:min_dist]
+				last_used_lg = binary_lgs[pos]
+				last_used_pos_on_lg = binary_positions_on_lgs[pos]
+				binary_seqs.size.times do |x|
+					binary_seqs_filtered[x] << binary_seqs[x][pos]
+				end
+			else
+				number_of_excluded_sites_due_to_min_dist += 1
 			end
-		else
-			number_of_excluded_sites_due_to_min_dist += 1
+		end
+	else
+		last_used_pos = nil
+		binary_seqs[0].size.times do |pos|
+			if last_used_pos == nil or last_used_pos <= pos - options[:min_dist]
+				last_used_pos = pos
+				binary_seqs.size.times do |x|
+					binary_seqs_filtered[x] << binary_seqs[x][pos]
+				end
+			else
+				number_of_excluded_sites_due_to_min_dist += 1
+			end
+
 		end
 	end
 	binary_seqs = binary_seqs_filtered
@@ -617,6 +632,8 @@ end
 # Compose the info string if necessary.
 info_string = ""
 if options[:vcf] != nil and options[:min_dist] != nil and options[:min_dist] > 1
+	info_string << "INFO: Removed #{number_of_excluded_sites_due_to_min_dist} bi-allelic sites due to specified minimum distance between sites of #{options[:min_dist]} bp.\n"
+elsif options[:min_dist] != nil and options[:min_dist] > 1
 	info_string << "INFO: Removed #{number_of_excluded_sites_due_to_min_dist} bi-allelic sites due to specified minimum distance between sites of #{options[:min_dist]} bp.\n"
 end
 if options[:max_snps] != nil
