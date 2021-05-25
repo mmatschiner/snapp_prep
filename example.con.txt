@@ -32,8 +32,8 @@
 #        (6.)   maximum estimate of turnover
 #        (7.)   minimum estimate of sampling rate
 #        (8.)   maximum estimate of sampling rate
-#        See Matschiner et al. (2016; http://bit.ly/2e9BCsc) for more information on
-#        cladeage constraints.
+#        See Matschiner et al. (2017; https://doi.org/10.1093/sysbio/syw076) for more
+#        information on cladeage constraints.
 #   The exception to this are pure monophyly constraints, in which case the first of the
 #   three character strings is simply "monophyletic".
 # - The second of the three character strings should be either "crown", "stem" or "NA"
@@ -52,5 +52,4 @@
 # - monophyletic	NA	speciesA,speciesB,speciesC
 
 lognormal(0,7.66172,0.1)	stem	s17,s0
-cladeage(10,11,0.01,0.02,0.2,0.5,0.001,0.01)	stem	s17,s0,s10
 monophyletic	NA	s1,s6,s11,s12,s3
