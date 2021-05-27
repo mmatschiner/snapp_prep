@@ -55,7 +55,7 @@ opt_parser = OptionParser.new do |opt|
 	opt.separator  "ruby #{$0} -p example.phy -t #{options[:table]} -c #{options[:constraints]} -x #{options[:xml]}"
 	opt.separator  ""
 	opt.separator  "Options:"
-	opt.on("-a","--analysis ANALYSIS","Analysis type, either 'SNAPP' or 'SNAPPER' (default: SNAPP).") {|p| options[:analysis] = a}
+	opt.on("-a","--analysis ANALYSIS","Analysis type, either 'SNAPP' or 'SNAPPER' (default: SNAPP).") {|a| options[:analysis] = a}
 	opt.on("-p","--phylip FILENAME","File with SNP data in phylip format (default: none).") {|p| options[:phylip] = p}
 	opt.on("-v","--vcf FILENAME","File with SNP data in vcf format (default: none).") {|v| options[:vcf] = v}
 	opt.on("-t","--table FILENAME","File with table linking species and specimens (default: #{options[:table]}).") {|t| options[:table] = t}
