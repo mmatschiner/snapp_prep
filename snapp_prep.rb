@@ -89,8 +89,8 @@ else
 	puts "ERROR: Unknown analysis type '#{analysis_type}'!"
 	exit(1)
 end
-options[:xml] = "#{analysis_type}.xml"
-options[:out] = "#{analysis_type}"
+options[:xml] = "#{analysis_type}.xml" if options[:xml] == nil
+options[:out] = "#{analysis_type}" if options[:out] == nil
 
 # Make sure that input is provided in either phylip or vcf format.
 if options[:phylip] == nil and options[:vcf] == nil
