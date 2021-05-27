@@ -2,12 +2,14 @@
 
 # Michael Matschiner, 2018-05-21
 #
-# This script prepares XML format input files for the software SNAPP (http://beast2.org/snapp/),
-# given a phylip format SNP matrix, a table linking species IDs and specimen IDs, and a file
-# specifying age constraints. Optionally, a starting tree can be provided (recommended) and the
-# number of MCMC iterations used by SNAPP can be specified. Files prepared by this script use
-# a particular combination of priors and operators optimized for SNAPP analyses that aim to
-# estimate species divergence times (note that all population sizes are linked in these analyses).
+# This script prepares XML format input files for the programs SNAPP (http://beast2.org/snapp/)
+# and SNAPPER (https://github.com/rbouckaert/snapper) given a SNP matrix in Phylip or VCF format,
+# a table linking species IDs and specimen IDs, and a file specifying age constraints.
+# Optionally, a starting tree can be provided (recommended) and the number of MCMC iterations
+# used by SNAPP or SNAPPER can be specified. Files prepared by this script use a particular
+# combination of priors and operators optimized for analyses that aim to estimate species
+# divergence times, and all population sizes are linked to enable SNAPP analysis with up to
+# around 20 or 30 populations.
 # Detailed annotation explaining the choice of priors and operators will be included in the
 # XML file (unless turned off with option '-n').
 #
@@ -596,7 +598,7 @@ if options[:max_snps] != nil
 		number_of_excluded_sites_due_to_max = number_of_sites_before_excluding_due_to_max - options[:max_snps]
 	else
 		warn_string << "WARNING: The maximum number of SNPs has been set to #{options[:max_snps]}, which is greater\n"
-		warn_string << "    than the number of bi-allelic SNPs with sufficient information (#{binary_seqs[0].size}) for SNAPP.\n"
+		warn_string << "    than the number of bi-allelic SNPs with sufficient information (#{binary_seqs[0].size}) for #{analysis_type.upcase}.\n"
 	end
 end
 
@@ -683,7 +685,7 @@ if constraint_strings.size == 0
 end
 if cladeage_constraints_used
 	info_string = "INFO: CladeAge constraints are specified in file #{options[:constraints]}.\n"
-	info_string << "    To use these in SNAPP, make sure that the CladeAge package for BEAST2 is installed.\n"
+	info_string << "    To use these in #{analysis_type.upcase}, make sure that the CladeAge package for BEAST2 is installed.\n"
 	info_string << "    Installation instructions can be found at http://evoinformatics.eu/cladeage.pdf.\n"
 	info_string << "\n"
 	puts info_string
@@ -695,7 +697,7 @@ if options[:tree]
 	tree_string = tree_file.readlines[0].strip.chomp(";").gsub(/\[.+?\]/,"")
 else
 	warn_string = "WARNING: As no starting tree has been specified, a random starting tree will be used by\n"
-	warn_string << "    SNAPP. If the random starting tree is in conflict with specified constraints, SNAPP\n"
+	warn_string << "    #{analysis_type.upcase}. If the random starting tree is in conflict with specified constraints, #{analysis_type.upcase}\n"
 	warn_string << "    may not be able to find a suitable state to initiate the MCMC chain. This will lead\n"
 	warn_string << "    to an error message such as 'Could not find a proper state to initialise'. If such\n"
 	warn_string << "    a problem is encountered, it can be solved by providing a starting tree in which\n"
@@ -710,10 +712,10 @@ screen_frequency = 50
 snapp_log_file_name = "#{options[:out]}.log"
 snapp_trees_file_name = "#{options[:out]}.trees"
 
-# Prepare SNAPP input string.
+# Prepare XML input string.
 xml_string = ""
 xml_string << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
-xml_string << "<beast beautitemplate='SNAPP' beautistatus='' namespace=\"beast.core:beast.evolution.alignment:beast.evolution.tree.coalescent:beast.core.util:beast.evolution.nuc:beast.evolution.operators:beast.evolution.sitemodel:beast.evolution.substitutionmodel:beast.evolution.likelihood\" version=\"2.0\">\n"
+xml_string << "<beast namespace=\"beast.core:beast.evolution.alignment:beast.evolution.tree.coalescent:beast.core.util:beast.evolution.nuc:beast.evolution.operators:beast.evolution.sitemodel:beast.evolution.substitutionmodel:beast.evolution.likelihood\" version=\"2.0\">\n"
 xml_string << "\n"
 xml_string << "<!-- Data -->\n"
 unless options[:no_annotation]
@@ -950,7 +952,7 @@ end
 xml_string << "            <distribution spec=\"snap.likelihood.SnAPPrior\" coalescenceRate=\"@coalescenceRate\" lambda=\"@lambda\" rateprior=\"uniform\" tree=\"@tree\">\n"
 unless options[:no_annotation]
 	xml_string << "                <!--\n"
-	xml_string << "                SNAPP requires input for parameters alpha and beta regardless of the chosen type of prior,\n"
+	xml_string << "                #{analysis_type.upcase} requires input for parameters alpha and beta regardless of the chosen type of prior,\n"
 	xml_string << "                however, the values of these two parameters are ignored when a uniform prior is selected.\n"
 	xml_string << "                Thus, they are both set arbitrarily to 1.0.\n"
 	xml_string << "                -->\n"
@@ -972,7 +974,7 @@ xml_string << "                <siteModel spec=\"SiteModel\">\n"
 if analysis_type == "snapp"
 	xml_string << "                    <substModel spec=\"snap.likelihood.SnapSubstitutionModel\" coalescenceRate=\"@coalescenceRate\">\n"
 elsif analysis_type == "snapper"
-	xml_string << "                    <substModel spec=\"snapper.SnapSubstitutionModel\" coalescenceRate=\"@coalescenceRate\">\n"
+	xml_string << "                    <substModel spec=\"snapper.SnapSubstitutionModel\">\n"
 else
 	puts "ERROR: Unknown analysis type '#{analysis_type}'!"
 	exit(1)
@@ -990,13 +992,16 @@ unless options[:no_annotation]
 end
 xml_string << "                        <parameter estimate=\"false\" lower=\"0.0\" name=\"mutationRateU\">1.0</parameter>\n"
 xml_string << "                        <parameter estimate=\"false\" lower=\"0.0\" name=\"mutationRateV\">1.0</parameter>\n"
+if analysis_type == "snapper"
+	xml_string << "                        <coalescentRate idref=\"coalescenceRate\"/>\n"
+end
 xml_string << "                    </substModel>\n"
 xml_string << "                </siteModel>\n"
 unless options[:no_annotation]
 	xml_string << "                <!--\n"
-	xml_string << "                A strict clock rate is used, assuming that only closely related species are used in SNAPP\n"
+	xml_string << "                A strict clock rate is used, assuming that only closely related species are used in #{analysis_type.upcase}\n"
 	xml_string << "                analyses and that branch rate variation among closely related species is negligible.\n"
-	xml_string << "                The use of a relaxed clock is not supported in SNAPP.\n"
+	xml_string << "                The use of a relaxed clock is not supported in #{analysis_type.upcase}.\n"
 	xml_string << "                -->\n"
 end
 xml_string << "                <branchRateModel spec=\"beast.evolution.branchratemodel.StrictClockModel\" clock.rate=\"@clockRate\"/>\n"
@@ -1025,7 +1030,7 @@ unless options[:no_annotation]
 	xml_string << "    <!--\n"
 	xml_string << "    To constrain the Theta parameter so that all branches always share the same value (and thus\n"
 	xml_string << "    the same population size estimates), a single operator is used to modify Theta values by scaling\n"
-	xml_string << "    the Thetas of all branches up or down by the same factor. Instead, SNAPP's default Theta operator\n"
+	xml_string << "    the Thetas of all branches up or down by the same factor. Instead, #{analysis_type.upcase}'s default Theta operator\n"
 	xml_string << "    types 'GammaMover' and 'RateMixer' are not not used.\n"
 	xml_string << "    -->\n"
 end
@@ -1065,7 +1070,7 @@ xml_string << "</run>\n"
 xml_string << "\n"
 xml_string << "</beast>\n"
 
-# Write the SNAPP input file.
+# Write the XML input file.
 snapp_file = File.open(options[:xml],"w")
 snapp_file.write(xml_string)
-puts "Wrote SNAPP input in XML format to file #{options[:xml]}.\n\n"
+puts "Wrote #{analysis_type.upcase} input in XML format to file #{options[:xml]}.\n\n"
