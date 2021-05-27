@@ -60,7 +60,7 @@ opt_parser = OptionParser.new do |opt|
 	opt.on("-a","--analysis ANALYSIS","Analysis type, either 'SNAPP' or 'SNAPPER' (default: SNAPP).") {|a| options[:analysis] = a}
 	opt.on("-p","--phylip FILENAME","File with SNP data in phylip format (default: none).") {|p| options[:phylip] = p}
 	opt.on("-v","--vcf FILENAME","File with SNP data in vcf format (default: none).") {|v| options[:vcf] = v}
-	opt.on("-t","--table FILENAME","File with table linking species and specimens (default: #{options[:table]}).") {|t| options[:table] = t}
+	opt.on("-t","--table FILENAME","File with table linking species and individuals (default: #{options[:table]}).") {|t| options[:table] = t}
 	opt.on("-c","--constraints FILENAME","File with age constraint information (default: #{options[:constraints]}).") {|c| options[:constraints] = c}
 	opt.on("-s","--starting-tree FILENAME","File with starting tree in Nexus or Newick format (default: none).") {|s| options[:tree] = s}
 	opt.on("-l","--length LENGTH",Integer,"Number of MCMC generations (default: #{options[:length]}).") {|l| options[:length] = l}
@@ -463,7 +463,7 @@ if options[:vcf] != nil
 	end
 end
 
-# Read the file with a table linking species and specimens.
+# Read the file with a table linking species and individuals.
 table_file = File.open(options[:table])
 table_lines = table_file.readlines
 table_species = []
@@ -486,7 +486,23 @@ end
 
 # Make sure that the arrays table_specimens and specimen_ids are identical when sorted.
 unless table_specimens.sort == specimen_ids.sort
-	puts "ERROR: The specimens listed in file #{options[:table]} and those included in the input file are not identical!"
+	if options[:vcf] != nil
+		input_file_name = options[:vcf]
+	else
+		input_file_name = options[:phylip]
+	end
+	puts "ERROR: The individuals listed in file #{options[:table]} and those included in the input file #{input_file_name} are not identical!"
+	error_string = "  File #{options[:table]} includes individuals "
+	table_specimens.sort[0..-2].each do |s|
+		error_string << "#{s}, "
+	end
+	error_string << "and #{table_specimens.sort[-1]}."
+	puts error_string
+	error_string = "  The input file #{input_file_name} includes individuals "
+	specimen_ids.sort[0..-2].each do |s|
+		error_string << "#{s}, "
+	end
+	error_string << "and #{specimen_ids.sort[-1]}."	
 	exit(1)
 end
 
