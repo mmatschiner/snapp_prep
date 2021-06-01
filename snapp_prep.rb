@@ -503,6 +503,7 @@ unless table_specimens.sort == specimen_ids.sort
 		error_string << "#{s}, "
 	end
 	error_string << "and #{specimen_ids.sort[-1]}."	
+	puts error_string
 	exit(1)
 end
 
