@@ -770,7 +770,14 @@ if options[:tree]
 else
 	xml_string << "        <stateNode id=\"tree\" spec=\"beast.util.ClusterTree\" clusterType=\"upgma\" nodetype=\"snap.NodeData\">\n"
 end
-xml_string << "            <taxa id=\"data\" spec=\"snap.Data\" dataType=\"integerdata\">\n"
+if analysis_type == "snapp"
+	xml_string << "            <taxa id=\"data\" spec=\"snap.Data\" dataType=\"integerdata\">\n"
+elsif analysis_type == "snapper"
+	xml_string << "            <taxa id=\"data\" spec=\"snapper.Data\" dataType=\"integerdata\">\n"
+else
+	puts "ERROR: Unknown analysis type '#{analysis_type}'!"
+	exit(1)
+end
 xml_string << "                <rawdata idref=\"snps\"/>\n"
 table_species.uniq.each do |s|
 	xml_string << "                <taxonset id=\"#{s}\" spec=\"TaxonSet\">\n"
