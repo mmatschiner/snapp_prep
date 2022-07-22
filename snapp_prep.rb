@@ -54,7 +54,7 @@ opt_parser = OptionParser.new do |opt|
 	opt.banner = "Usage: ruby #{$0} [OPTIONS]"
 	opt.separator  ""
 	opt.separator  "Example:"
-	opt.separator  "ruby #{$0} -p example.phy -t #{options[:table]} -c #{options[:constraints]} -x #{options[:xml]}"
+	opt.separator  "ruby #{$0} -p example.phy -t #{options[:table]} -c #{options[:constraints]}"
 	opt.separator  ""
 	opt.separator  "Options:"
 	opt.on("-a","--analysis ANALYSIS","Analysis type, either 'SNAPP' or 'SNAPPER' (default: SNAPP).") {|a| options[:analysis] = a}
