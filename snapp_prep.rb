@@ -837,9 +837,9 @@ constraint_strings.each do |c|
 	else
 		constraint_type = constraint_distribution.split("(")[0].strip
 	end
-	unless ["normal","lognormal","uniform","cladeage","monophyletic"].include?(constraint_type)
-		puts "ERROR: Expected 'normal', 'lognormal', 'uniform', 'cladeage', or 'monophyletic' as part"
-		puts "    of the first character string in '#{c}' but found '#{constraint_type}'!"
+	unless ["normal","lognormal","uniform","exponential","cladeage","monophyletic"].include?(constraint_type)
+		puts "ERROR: Expected 'normal', 'lognormal', 'uniform', 'exponential', 'cladeage', or 'monophyletic'"
+		puts "    as part of the first character string in '#{c}' but found '#{constraint_type}'!"
 		exit(1)
 	end
 	unless constraint_type == "monophyletic"
@@ -857,12 +857,17 @@ constraint_strings.each do |c|
 		end
 	elsif constraint_type == "uniform"
 		unless constraint_parameters.size == 2
-			puts "ERROR: Expected 2 parameters for lognormal distribution, but found #{constraint_parameters.size}!"
+			puts "ERROR: Expected 2 parameters for uniform distribution, but found #{constraint_parameters.size}!"
+			exit(1)
+		end
+	elsif constraint_type == "exponential"
+		unless constraint_parameters.size == 2
+			puts "ERROR: Expected 2 parameters for exponential distribution, but found #{constraint_parameters.size}!"
 			exit(1)
 		end
 	elsif constraint_type == "cladeage"
 		unless constraint_parameters.size == 8
-			puts "ERROR: Expected 8 parameters for lognormal distribution, but found #{constraint_parameters.size}!"
+			puts "ERROR: Expected 8 parameters for cladeage distribution, but found #{constraint_parameters.size}!"
 			exit(1)
 		end
 	else
@@ -905,6 +910,8 @@ constraint_strings.each do |c|
 		xml_string << "                </LogNormal>\n"
 	elsif constraint_type == "uniform"
 		xml_string << "                <Uniform name=\"distr\" lower=\"#{constraint_parameters[0]}\" upper=\"#{constraint_parameters[1]}\"/>\n"
+	elsif constraint_type == "exponential"
+		xml_string << "                <Exponential name=\"distr\" offset=\"#{constraint_parameters[0]}\" mean=\"#{constraint_parameters[1]}\"/>\n"
 	elsif constraint_type == "cladeage"
 		xml_string << "                <fossilDistr\n"
 		xml_string << "                    id=\"#{constraint_id}\"\n"
