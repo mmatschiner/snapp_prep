@@ -694,11 +694,7 @@ constraint_lines = constraint_file.readlines
 constraint_strings = []
 cladeage_constraints_used = false
 constraint_lines.each do |l|
-<<<<<<< HEAD
 	if ["normal","lognor","unifor","expone","cladea","monoph"].include?(l[0..5].downcase)
-=======
-	if ["normal","lognor","unifor","cladea","monoph","expone"].include?(l[0..5].downcase)
->>>>>>> f7af3e06866f41bc0a7b4279ca740b2f82d0e2cb
 		cladeage_constraints_used = true if l[0..7].downcase == "cladeage"
 		constraint_strings << l
 	end
