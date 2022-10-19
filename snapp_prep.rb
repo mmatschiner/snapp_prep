@@ -694,7 +694,11 @@ constraint_lines = constraint_file.readlines
 constraint_strings = []
 cladeage_constraints_used = false
 constraint_lines.each do |l|
+<<<<<<< HEAD
+	if ["normal","lognor","unifor","expone","cladea","monoph"].include?(l[0..5].downcase)
+=======
 	if ["normal","lognor","unifor","cladea","monoph","expone"].include?(l[0..5].downcase)
+>>>>>>> f7af3e06866f41bc0a7b4279ca740b2f82d0e2cb
 		cladeage_constraints_used = true if l[0..7].downcase == "cladeage"
 		constraint_strings << l
 	end
@@ -734,7 +738,7 @@ snapp_trees_file_name = "#{options[:out]}.trees"
 # Prepare XML input string.
 xml_string = ""
 xml_string << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n"
-xml_string << "<beast namespace=\"beast.core:beast.evolution.alignment:beast.evolution.tree.coalescent:beast.core.util:beast.evolution.nuc:beast.evolution.operators:beast.evolution.sitemodel:beast.evolution.substitutionmodel:beast.evolution.likelihood\" version=\"2.0\">\n"
+xml_string << "<beast namespace=\"beast.pkgmgmt:beast.base.core:beast.base.inference:beast.base.evolution.alignment:beast.base.evolution.tree.coalescent:beast.pkgmgmt:beast.base.core:beast.base.inference.util:beast.evolution.nuc:beast.base.evolution.operator:beast.base.inference.operator:beast.base.evolution.sitemodel:beast.base.evolution.substitutionmodel:beast.base.evolution.likelihood\" version=\"2.0\">\n"
 xml_string << "\n"
 xml_string << "<!-- Data -->\n"
 unless options[:no_annotation]
@@ -753,13 +757,13 @@ end
 xml_string << "</data>\n"
 xml_string << "\n"
 xml_string << "<!-- Maps -->\n"
-xml_string << "<map name=\"Uniform\" >beast.math.distributions.Uniform</map>\n"
-xml_string << "<map name=\"Exponential\" >beast.math.distributions.Exponential</map>\n"
-xml_string << "<map name=\"LogNormal\" >beast.math.distributions.LogNormalDistributionModel</map>\n"
-xml_string << "<map name=\"Normal\" >beast.math.distributions.Normal</map>\n"
-xml_string << "<map name=\"Gamma\" >beast.math.distributions.Gamma</map>\n"
-xml_string << "<map name=\"OneOnX\" >beast.math.distributions.OneOnX</map>\n"
-xml_string << "<map name=\"prior\" >beast.math.distributions.Prior</map>\n"
+xml_string << "<map name=\"Uniform\" >beast.base.inference.distribution.Uniform</map>\n"
+xml_string << "<map name=\"Exponential\" >beast.base.inference.distribution.Exponential</map>\n"
+xml_string << "<map name=\"LogNormal\" >beast.base.inference.distribution.LogNormalDistributionModel</map>\n"
+xml_string << "<map name=\"Normal\" >beast.base.inference.distribution.Normal</map>\n"
+xml_string << "<map name=\"Gamma\" >beast.base.inference.distribution.Gamma</map>\n"
+xml_string << "<map name=\"OneOnX\" >beast.base.inference.distribution.OneOnX</map>\n"
+xml_string << "<map name=\"prior\" >beast.base.inference.distribution.Prior</map>\n"
 xml_string << "\n"
 xml_string << "<run id=\"mcmc\" spec=\"MCMC\" chainLength=\"#{options[:length]}\" storeEvery=\"#{store_frequency}\">\n"
 xml_string << "\n"
@@ -768,7 +772,7 @@ xml_string << "    <state id=\"state\" storeEvery=\"#{store_frequency}\">\n"
 if options[:tree]
 	xml_string << "        <stateNode id=\"tree\" spec=\"beast.util.TreeParser\" IsLabelledNewick=\"true\" nodetype=\"snap.NodeData\" newick=\"#{tree_string};\">\n"
 else
-	xml_string << "        <stateNode id=\"tree\" spec=\"beast.util.ClusterTree\" clusterType=\"upgma\" nodetype=\"snap.NodeData\">\n"
+	xml_string << "        <stateNode id=\"tree\" spec=\"beast.base.evolution.tree.ClusterTree\" clusterType=\"upgma\" nodetype=\"snap.NodeData\">\n"
 end
 if analysis_type == "snapp"
 	xml_string << "            <taxa id=\"data\" spec=\"snap.Data\" dataType=\"integerdata\">\n"
@@ -797,8 +801,8 @@ xml_string << "        <parameter id=\"clockRate\" lower=\"0.0\" name=\"stateNod
 xml_string << "    </state>\n"
 xml_string << "\n"
 xml_string << "    <!-- Posterior -->\n"
-xml_string << "    <distribution id=\"posterior\" spec=\"util.CompoundDistribution\">\n"
-xml_string << "        <distribution id=\"prior\" spec=\"util.CompoundDistribution\">\n"
+xml_string << "    <distribution id=\"posterior\" spec=\"beast.base.inference.CompoundDistribution\">\n"
+xml_string << "        <distribution id=\"prior\" spec=\"beast.base.inference.CompoundDistribution\">\n"
 xml_string << "\n"
 xml_string << "            <!-- Divergence age priors -->\n"
 constraint_count = 0
@@ -880,7 +884,7 @@ constraint_strings.each do |c|
 	if constraint_type == "cladeage"
 		xml_string << "            <distribution id=\"Clade#{constraint_id}\" spec=\"beast.math.distributions.FossilPrior\" monophyletic=\"true\"  tree=\"@tree\">\n"
 	else
-		xml_string << "            <distribution id=\"Clade#{constraint_id}\" spec=\"beast.math.distributions.MRCAPrior\" "
+		xml_string << "            <distribution id=\"Clade#{constraint_id}\" spec=\"beast.base.evolution.tree.MRCAPrior\" "
 		if constraint_placement == "stem"
 			if constraint_clade_ary.size == table_species.uniq.size
 				puts "ERROR: It seems that a #{constraint_type} constraint should be placed on the stem of the root of the phylogeny!"
@@ -994,7 +998,7 @@ xml_string << "                <parameter estimate=\"false\" lower=\"0.0\" name=
 xml_string << "                <parameter estimate=\"false\" lower=\"0.0\" name=\"beta\">1.0</parameter>\n"
 xml_string << "            </distribution>\n"
 xml_string << "        </distribution>\n"
-xml_string << "        <distribution id=\"likelihood\" spec=\"util.CompoundDistribution\">\n"
+xml_string << "        <distribution id=\"likelihood\" spec=\"beast.base.inference.CompoundDistribution\">\n"
 if analysis_type == "snapp"
 	xml_string << "            <distribution spec=\"snap.likelihood.SnAPTreeLikelihood\" id=\"SnAPTreeLikelihood\" data=\"@data\" non-polymorphic=\"false\" pattern=\"coalescenceRate\" tree=\"@tree\">\n"
 elsif analysis_type == "snapper"
@@ -1037,7 +1041,7 @@ unless options[:no_annotation]
 	xml_string << "                The use of a relaxed clock is not supported in #{analysis_type.upcase}.\n"
 	xml_string << "                -->\n"
 end
-xml_string << "                <branchRateModel spec=\"beast.evolution.branchratemodel.StrictClockModel\" clock.rate=\"@clockRate\"/>\n"
+xml_string << "                <branchRateModel spec=\"beast.base.evolution.branchratemodel.StrictClockModel\" clock.rate=\"@clockRate\"/>\n"
 xml_string << "            </distribution>\n"
 xml_string << "        </distribution>\n"
 xml_string << "    </distribution>\n"
@@ -1082,7 +1086,7 @@ xml_string << "        <log idref=\"posterior\"/>\n"
 xml_string << "        <log idref=\"likelihood\"/>\n"
 xml_string << "        <log idref=\"prior\"/>\n"
 xml_string << "        <log idref=\"lambda\"/>\n"
-xml_string << "        <log id=\"treeHeightLogger\" spec=\"beast.evolution.tree.TreeHeightLogger\" tree=\"@tree\"/>\n"
+xml_string << "        <log id=\"treeHeightLogger\" spec=\"beast.base.evolution.tree.TreeHeightLogger\" tree=\"@tree\"/>\n"
 xml_string << "        <log idref=\"clockRate\"/>\n"
 xml_string << "    </logger>\n"
 xml_string << "    <logger logEvery=\"#{screen_frequency}\">\n"
@@ -1094,7 +1098,7 @@ xml_string << "        <log idref=\"treeHeightLogger\"/>\n"
 xml_string << "        <log idref=\"clockRate\"/>\n"
 xml_string << "    </logger>\n"
 xml_string << "    <logger fileName=\"#{snapp_trees_file_name}\" logEvery=\"#{store_frequency}\" mode=\"tree\">\n"
-xml_string << "        <log spec=\"beast.evolution.tree.TreeWithMetaDataLogger\" tree=\"@tree\">\n"
+xml_string << "        <log spec=\"beast.base.evolution.TreeWithMetaDataLogger\" tree=\"@tree\">\n"
 xml_string << "            <metadata id=\"theta\" spec=\"snap.RateToTheta\" coalescenceRate=\"@coalescenceRate\"/>\n"
 xml_string << "        </log>\n"
 xml_string << "    </logger>\n"
