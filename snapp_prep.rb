@@ -766,7 +766,7 @@ xml_string << "\n"
 xml_string << "    <!-- State -->\n"
 xml_string << "    <state id=\"state\" storeEvery=\"#{store_frequency}\">\n"
 if options[:tree]
-	xml_string << "        <stateNode id=\"tree\" spec=\"beast.util.TreeParser\" IsLabelledNewick=\"true\" nodetype=\"snap.NodeData\" newick=\"#{tree_string};\">\n"
+	xml_string << "        <stateNode id=\"tree\" spec=\"beast.base.evolution.tree.TreeParser\" IsLabelledNewick=\"true\" nodetype=\"snap.NodeData\" newick=\"#{tree_string};\">\n"
 else
 	xml_string << "        <stateNode id=\"tree\" spec=\"beast.base.evolution.tree.ClusterTree\" clusterType=\"upgma\" nodetype=\"snap.NodeData\">\n"
 end
